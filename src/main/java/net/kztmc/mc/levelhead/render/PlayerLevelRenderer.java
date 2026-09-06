@@ -2,6 +2,7 @@ package net.kztmc.mc.levelhead.render;
 
 import net.kztmc.mc.levelhead.Main;
 import net.kztmc.mc.levelhead.cache.PlayerStats;
+import net.kztmc.mc.levelhead.cache.PlayerStatsCache;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.FontRenderer;
 import net.minecraft.entity.player.EntityPlayer;
@@ -22,13 +23,69 @@ public class PlayerLevelRenderer {
         EntityPlayer player =
                 event.entityPlayer;
 
+        /*
+         * 自分自身には表示しない。
+         */
         if (player == mc.thePlayer) {
             return;
         }
 
+        /*
+         * 距離を計算。
+         */
+        float distance =
+                player.getDistanceToEntity(
+                        mc.thePlayer
+                );
+
+        /*
+         * 64ブロック以上は対象外。
+         *
+         * APIリクエストも発生させない。
+         */
+        if (distance > 64.0F) {
+            return;
+        }
+
+        /*
+         * 距離によってAPIリクエストの優先度を決定。
+         *
+         * 0～16   : HIGH
+         * 16～48  : NORMAL
+         * 48～64  : LOW
+         */
+        PlayerStatsCache.Priority priority;
+
+        if (distance <= 16.0F) {
+
+            priority =
+                    PlayerStatsCache.Priority.HIGH;
+
+        } else if (distance <= 48.0F) {
+
+            priority =
+                    PlayerStatsCache.Priority.NORMAL;
+
+        } else {
+
+            priority =
+                    PlayerStatsCache.Priority.LOW;
+        }
+
+        /*
+         * キャッシュから取得。
+         *
+         * キャッシュがなければ null が返り、
+         * 裏でAPIリクエストがキューに追加される。
+         *
+         * キャッシュが期限切れの場合も、
+         * 古いデータを表示しながら
+         * 裏で更新される。
+         */
         PlayerStats stats =
                 Main.CACHE.get(
-                        player.getUniqueID()
+                        player.getUniqueID(),
+                        priority
                 );
 
         if (stats == null) {
@@ -55,6 +112,9 @@ public class PlayerLevelRenderer {
         StringBuilder text =
                 new StringBuilder();
 
+        /*
+         * Hypixel Network Level
+         */
         if (Main.CONFIG.isShowHypixelLevel()) {
 
             text.append("§b")
@@ -66,6 +126,9 @@ public class PlayerLevelRenderer {
             }
         }
 
+        /*
+         * BedWars Level
+         */
         if (Main.CONFIG.isShowBedwarsLevel()) {
 
             text.append("§a")
@@ -73,6 +136,9 @@ public class PlayerLevelRenderer {
                     .append("✫");
         }
 
+        /*
+         * 何も表示しない設定なら終了。
+         */
         if (text.length() == 0) {
             return;
         }
@@ -80,17 +146,8 @@ public class PlayerLevelRenderer {
         FontRenderer font =
                 mc.fontRendererObj;
 
-        float distance =
-                player.getDistanceToEntity(
-                        mc.thePlayer
-                );
-
         float scale =
                 0.016666668F;
-
-        if (distance > 64.0F) {
-            return;
-        }
 
         GL11.glPushMatrix();
 
@@ -102,6 +159,9 @@ public class PlayerLevelRenderer {
                 (float) z
         );
 
+        /*
+         * プレイヤーの方向を向く。
+         */
         GL11.glRotatef(
                 -mc.getRenderManager()
                         .playerViewY,
@@ -118,20 +178,32 @@ public class PlayerLevelRenderer {
                 0.0F
         );
 
+        /*
+         * テキストサイズ。
+         */
         GL11.glScalef(
                 -scale,
                 -scale,
                 scale
         );
 
+        /*
+         * ライティングを無効化。
+         */
         GL11.glDisable(
                 GL11.GL_LIGHTING
         );
 
+        /*
+         * 壁越しでも表示。
+         */
         GL11.glDisable(
                 GL11.GL_DEPTH_TEST
         );
 
+        /*
+         * 半透明背景のためBlendを有効化。
+         */
         GL11.glEnable(
                 GL11.GL_BLEND
         );
@@ -141,13 +213,20 @@ public class PlayerLevelRenderer {
                 GL11.GL_ONE_MINUS_SRC_ALPHA
         );
 
+        /*
+         * テキスト幅を取得。
+         */
         int width =
-                font.getStringWidth(text.toString());
+                font.getStringWidth(
+                        text.toString()
+                );
 
         float drawX =
                 -width / 2.0F;
 
-        // 黒い半透明背景
+        /*
+         * 黒い半透明背景。
+         */
         drawBackground(
                 drawX - 2,
                 -2,
@@ -155,6 +234,9 @@ public class PlayerLevelRenderer {
                 font.FONT_HEIGHT + 4
         );
 
+        /*
+         * テキスト描画。
+         */
         font.drawStringWithShadow(
                 text.toString(),
                 drawX,
@@ -162,6 +244,9 @@ public class PlayerLevelRenderer {
                 0xFFFFFF
         );
 
+        /*
+         * GL状態を元に戻す。
+         */
         GL11.glDisable(
                 GL11.GL_BLEND
         );
@@ -184,11 +269,13 @@ public class PlayerLevelRenderer {
             float height
     ) {
 
-        net.minecraft.client.renderer.Tessellator tessellator =
+        net.minecraft.client.renderer.Tessellator
+                tessellator =
                 net.minecraft.client.renderer.Tessellator
                         .getInstance();
 
-        net.minecraft.client.renderer.WorldRenderer renderer =
+        net.minecraft.client.renderer.WorldRenderer
+                renderer =
                 tessellator.getWorldRenderer();
 
         net.minecraft.client.renderer.GlStateManager
@@ -199,29 +286,56 @@ public class PlayerLevelRenderer {
                 net.minecraft.client.renderer.vertex.DefaultVertexFormats.POSITION_COLOR
         );
 
-        renderer.pos(x, y, 0)
-                .color(0, 0, 0, 120)
+        renderer.pos(
+                        x,
+                        y,
+                        0
+                )
+                .color(
+                        0,
+                        0,
+                        0,
+                        120
+                )
                 .endVertex();
 
         renderer.pos(
                         x + width,
                         y,
                         0
-                ).color(0, 0, 0, 120)
+                )
+                .color(
+                        0,
+                        0,
+                        0,
+                        120
+                )
                 .endVertex();
 
         renderer.pos(
                         x + width,
                         y + height,
                         0
-                ).color(0, 0, 0, 120)
+                )
+                .color(
+                        0,
+                        0,
+                        0,
+                        120
+                )
                 .endVertex();
 
         renderer.pos(
                         x,
                         y + height,
                         0
-                ).color(0, 0, 0, 120)
+                )
+                .color(
+                        0,
+                        0,
+                        0,
+                        120
+                )
                 .endVertex();
 
         tessellator.draw();

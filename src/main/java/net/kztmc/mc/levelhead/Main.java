@@ -56,7 +56,7 @@ public class Main {
         }
 
         if (CONFIG.getApiMode() == ModConfig.ApiMode.HYPIXEL) {
-            apiClient = new HypixelApiClient(CONFIG);
+            apiClient = new HypixelApiClient(CONFIG.getHypixelApiKey());
         } else {
             apiClient = new CustomApiClient(CONFIG);
         }
