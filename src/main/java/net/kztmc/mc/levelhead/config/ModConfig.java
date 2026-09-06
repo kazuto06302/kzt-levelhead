@@ -176,7 +176,7 @@ public class ModConfig {
         return file;
     }
 
-    public int getrequestInterval() {
+    public int getRequestInterval() {
         return data.requestInterval;
     }
 }

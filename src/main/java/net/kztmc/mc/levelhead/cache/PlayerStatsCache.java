@@ -81,9 +81,9 @@ public class PlayerStatsCache {
 
 
     private final Thread worker;
-    private static final long REQUEST_INTERVAL = 500L;
     private long worldGeneration = 0L;
     private volatile boolean running = true;
+    private long rateLimitUntil = 0L;
 
     public PlayerStatsCache(ModConfig config) {
 
@@ -169,11 +169,23 @@ public class PlayerStatsCache {
                 }
 
                 if (!running) return;
+
                 request = queue.poll();
+
                 if (request == null) continue;
 
                 pending.remove(request.uuid);
                 requests.remove(request.uuid);
+            }
+
+            long remaining = rateLimitUntil - System.currentTimeMillis();
+
+            if (remaining > 0L) {
+                try {
+                    Thread.sleep(remaining);
+                } catch (InterruptedException e) {
+                    if (!running) return;
+                }
             }
 
             executeRequest(request);
@@ -181,7 +193,7 @@ public class PlayerStatsCache {
             if (!running) return;
 
             try {
-                Thread.sleep(Main.CONFIG.getrequestInterval());
+                Thread.sleep(Main.CONFIG.getRequestInterval());
             } catch (InterruptedException e) {
                 if (!running) return;
             }
@@ -224,6 +236,8 @@ public class PlayerStatsCache {
                 synchronized (this) {
                     if (requestGeneration != worldGeneration) return;
 
+                    rateLimitUntil = System.currentTimeMillis() + 60000L;
+
                     if (!pending.contains(request.uuid)) {
                         Request retry = new Request(request.uuid, request.priority, request.callback);
 
@@ -254,6 +268,8 @@ public class PlayerStatsCache {
         queue.clear();
         pending.clear();
         requests.clear();
+
+        rateLimitUntil = 0L;
 
         notifyAll();
     }

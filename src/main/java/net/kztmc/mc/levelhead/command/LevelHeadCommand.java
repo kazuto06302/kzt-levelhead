@@ -182,7 +182,7 @@ public class LevelHeadCommand extends CommandBase {
     private void setInterval(ICommandSender sender, String[] args) {
         if (args.length < 2) {
             send(sender, "Usage: /levelhead interval <requestInterval(ms)>");
-            send(sender, "Current: " + Main.CONFIG.getrequestInterval());
+            send(sender, "Current: " + Main.CONFIG.getRequestInterval());
             return;
         }
 
