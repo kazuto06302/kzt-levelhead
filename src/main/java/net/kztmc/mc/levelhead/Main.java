@@ -7,6 +7,8 @@ import net.kztmc.mc.levelhead.cache.PlayerStatsCache;
 import net.kztmc.mc.levelhead.command.LevelHeadCommand;
 import net.kztmc.mc.levelhead.config.ModConfig;
 import net.kztmc.mc.levelhead.render.PlayerLevelRenderer;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.network.NetworkPlayerInfo;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.world.WorldEvent;
 import net.minecraftforge.fml.common.Mod;
@@ -14,6 +16,9 @@ import net.minecraftforge.fml.common.event.FMLInitializationEvent;
 import net.minecraftforge.fml.common.event.FMLPreInitializationEvent;
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
 import net.minecraftforge.fml.common.gameevent.PlayerEvent;
+import net.minecraftforge.fml.common.gameevent.TickEvent;
+
+import java.util.Collection;
 
 @Mod(
         modid = Main.MOD_ID,
@@ -31,6 +36,13 @@ public class Main {
     public static PlayerStatsCache CACHE;
 
     private static ApiClient apiClient;
+
+    private final Minecraft mc = Minecraft.getMinecraft();
+
+    /**
+     * TABのチェック用タイマー
+     */
+    private int tabCheckTimer = 0;
 
     @Mod.EventHandler
     public void preInit(FMLPreInitializationEvent event) {
@@ -67,6 +79,62 @@ public class Main {
         return apiClient;
     }
 
+    /**
+     * クライアントTick
+     *
+     * 1秒ごとにTABの人数を確認する。
+     *
+     * TABが24人未満なら、TABにいる全員を
+     * NORMAL優先度で取得キューに追加する。
+     */
+    @SubscribeEvent
+    public void onClientTick(TickEvent.ClientTickEvent event) {
+
+        if (event.phase != TickEvent.Phase.END) {
+            return;
+        }
+
+        if (mc.theWorld == null || mc.thePlayer == null) {
+            return;
+        }
+
+        // 20 tick = 約1秒
+        tabCheckTimer++;
+
+        if (tabCheckTimer < 20) {
+            return;
+        }
+
+        tabCheckTimer = 0;
+
+        if (mc.getNetHandler() == null) {
+            return;
+        }
+
+        Collection<NetworkPlayerInfo> players =
+                mc.getNetHandler().getPlayerInfoMap();
+
+        int playerCount = players.size();
+
+        // TABが24人以上なら何もしない
+        if (playerCount >= 24) {
+            return;
+        }
+
+        // TABにいる全員をNORMALでキューに入れる
+        for (NetworkPlayerInfo info : players) {
+
+            if (info == null || info.getGameProfile() == null) {
+                continue;
+            }
+
+            CACHE.get(
+                    info.getGameProfile().getId(),
+                    PlayerStatsCache.Priority.NORMAL
+            );
+        }
+    }
+
     @SubscribeEvent
     public void onPlayerLoggedOut(PlayerEvent.PlayerLoggedOutEvent event) {
         if (event.player == null) {
@@ -84,5 +152,7 @@ public class Main {
         if (CACHE != null) {
             CACHE.resetQueue();
         }
+
+        tabCheckTimer = 0;
     }
 }
