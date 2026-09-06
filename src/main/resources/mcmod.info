@@ -1,0 +1,18 @@
+[
+  {
+    "modid": "levelhead",
+    "name": "kzt-LevelHead",
+    "description": "Displays Hypixel and BedWars levels above players.",
+    "version": "${version}",
+    "mcversion": "${mcversion}",
+    "url": "",
+    "updateUrl": "",
+    "authorList": [
+      "Kazut0_"
+    ],
+    "credits": "kazut0",
+    "logoFile": "",
+    "screenshots": [],
+    "dependencies": []
+  }
+]
