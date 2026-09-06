@@ -34,7 +34,7 @@ public class LevelHeadCommand extends CommandBase {
 
     @Override
     public String getCommandUsage(ICommandSender sender) {
-        return "/levelhead <key|mode|api|clearcache|reload>";
+        return "/levelhead <key|mode|api|clearcache|reload|interval|game>";
     }
 
     @Override
@@ -47,7 +47,9 @@ public class LevelHeadCommand extends CommandBase {
                     "mode",
                     "api",
                     "clearcache",
-                    "reload"
+                    "reload",
+                    "interval",
+                    "game"
             );
         }
 
@@ -97,12 +99,23 @@ public class LevelHeadCommand extends CommandBase {
             return;
         }
 
+        if (args[0].equalsIgnoreCase("interval")) {
+            setInterval(sender, args);
+            return;
+        }
+
+        if (args[0].equalsIgnoreCase("game")) {
+            setGame(sender, args);
+            return;
+        }
+
         help(sender);
     }
 
     private void setKey(ICommandSender sender, String[] args) {
         if (args.length < 2) {
             send(sender, "Usage: /levelhead key <API-Key>");
+            send(sender, "Current: " + maskapi(Main.CONFIG.getHypixelApiKey()));
 
             return;
         }
@@ -117,7 +130,8 @@ public class LevelHeadCommand extends CommandBase {
     private void setMode(ICommandSender sender, String[] args) {
 
         if (args.length < 2) {
-            send(sender, "Current mode: " + Main.CONFIG.getApiMode().name());
+            send(sender, "Usage: /levelhead api <hypixel | custom>");
+            send(sender, "Current: " + Main.CONFIG.getApiMode().name());
             return;
         }
 
@@ -143,6 +157,7 @@ public class LevelHeadCommand extends CommandBase {
 
         if (args.length < 2) {
             send(sender, "Usage: /levelhead api <URL>");
+            send(sender, "Current: " + Main.CONFIG.getCustomApiUrl());
             return;
         }
 
@@ -160,6 +175,57 @@ public class LevelHeadCommand extends CommandBase {
         send(sender, "§b/levelhead api <url> §7- Set custom API URL");
         send(sender, "§b/levelhead clearcache §7- Clear cache");
         send(sender, "§b/levelhead reload §7- Reload configuration");
+        send(sender, "§b/levelhead interval §7- Set requestInterval");
+        send(sender, "§b/levelhead game §7- Set Gamemode");
+    }
+
+    private void setInterval(ICommandSender sender, String[] args) {
+        if (args.length < 2) {
+            send(sender, "Usage: /levelhead interval <requestInterval(ms)>");
+            send(sender, "Current: " + Main.CONFIG.getrequestInterval());
+            return;
+        }
+
+        try {
+            int interval = Integer.parseInt(args[1]);
+
+            if (interval < 0) {
+                send(sender, "Interval must be a positive integer.");
+                return;
+            }
+
+            Main.CONFIG.setRequestInterval(interval);
+            Main.rebuildApiClient();
+
+            send(sender, "requestInterval saved.");
+        } catch (NumberFormatException e) {
+            send(sender, "Invalid number format. Please enter a valid integer.");
+        }
+    }
+
+    private void setGame(ICommandSender sender, String[] args) {
+
+        if (args.length < 2) {
+            send(sender, "Usage: /levelhead game <hypixel | bedwars>");
+            send(sender, "Current: " + Main.CONFIG.getLevelType().name());
+            return;
+        }
+
+        if (args[1].equalsIgnoreCase("hypixel") || args[1].equalsIgnoreCase("network")) {
+            Main.CONFIG.setLevelType(ModConfig.LevelType.HYPIXEL);
+
+        } else if (args[1].equalsIgnoreCase("bedwars") || args[1].equalsIgnoreCase("bw")) {
+            Main.CONFIG.setLevelType(ModConfig.LevelType.BEDWARS);
+
+        } else {
+            send(sender, "Mode must be hypixel or bedwars");
+            return;
+        }
+
+        Main.rebuildApiClient();
+        Main.CACHE.clear();
+
+        send(sender, "Game mode changed to " + Main.CONFIG.getLevelType().name());
     }
 
     private void send(ICommandSender sender, String message) {
@@ -176,5 +242,10 @@ public class LevelHeadCommand extends CommandBase {
     @Override
     public int getRequiredPermissionLevel() {
         return 0;
+    }
+
+    public static String maskapi(String input) {
+        if (input == null || input.isEmpty()) return input;
+        return input.charAt(0) + input.substring(1).replaceAll(".", "*");
     }
 }

@@ -78,15 +78,14 @@ public class PlayerLevelRenderer {
             PlayerStats stats
     ) {
 
-        String text;
+        String text = "";
 
         ModConfig.LevelType levelType = Main.CONFIG.getLevelType();
 
         if (levelType == ModConfig.LevelType.HYPIXEL) {
-            text = "§b" + stats.getHypixelLevel() + "§f";
-
-        } else {
-            text = "§a" + stats.getBedwarsLevel() + "✫";
+            text = "§f" + "NetworkLevel: " + "§b" + stats.getHypixelLevel() + "§f";
+        } else if (levelType == ModConfig.LevelType.BEDWARS){
+            text = "§f" + "BWLevel: " + "§a" + stats.getBedwarsLevel() + "✫";
         }
 
         FontRenderer font = mc.fontRendererObj;

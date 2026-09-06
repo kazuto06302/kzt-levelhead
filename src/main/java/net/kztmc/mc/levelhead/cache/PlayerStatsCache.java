@@ -181,7 +181,7 @@ public class PlayerStatsCache {
             if (!running) return;
 
             try {
-                Thread.sleep(REQUEST_INTERVAL);
+                Thread.sleep(Main.CONFIG.getrequestInterval());
             } catch (InterruptedException e) {
                 if (!running) return;
             }

@@ -33,6 +33,8 @@ public class ModConfig {
         int maxCacheSize = 10000;
 
         String levelType = "HYPIXEL";
+
+        int requestInterval = 1000;
     }
 
     private final File file;
@@ -128,6 +130,11 @@ public class ModConfig {
         save();
     }
 
+    public void setRequestInterval(int requestInterval) {
+        data.requestInterval = requestInterval;
+        save();
+    }
+
     public long getCacheDurationMillis() {
         return data.cacheDurationHours * 60L * 60L * 1000L;
     }
@@ -167,5 +174,9 @@ public class ModConfig {
 
     public File getFile() {
         return file;
+    }
+
+    public int getrequestInterval() {
+        return data.requestInterval;
     }
 }
