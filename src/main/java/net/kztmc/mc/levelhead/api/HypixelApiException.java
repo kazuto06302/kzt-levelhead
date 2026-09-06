@@ -4,10 +4,7 @@ public class HypixelApiException extends Exception {
 
     private final int statusCode;
 
-    public HypixelApiException(
-            int statusCode,
-            String message
-    ) {
+    public HypixelApiException(int statusCode, String message) {
         super(message);
         this.statusCode = statusCode;
     }

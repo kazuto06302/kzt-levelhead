@@ -32,22 +32,11 @@ public class ModConfig {
 
         int maxCacheSize = 10000;
 
-        /*
-         * 表示・取得するレベル。
-         *
-         * HYPIXEL = Network Level
-         * BEDWARS = BedWars Level
-         */
         String levelType = "HYPIXEL";
     }
 
     private final File file;
-
-    private final Gson gson =
-            new GsonBuilder()
-                    .setPrettyPrinting()
-                    .create();
-
+    private final Gson gson = new GsonBuilder().setPrettyPrinting().create();
     private Data data = new Data();
 
     public ModConfig(File configDirectory) {
@@ -76,14 +65,8 @@ public class ModConfig {
 
         try {
 
-            FileReader reader =
-                    new FileReader(file);
-
-            Data loaded =
-                    gson.fromJson(
-                            reader,
-                            Data.class
-                    );
+            FileReader reader = new FileReader(file);
+            Data loaded = gson.fromJson(reader, Data.class);
 
             reader.close();
 
@@ -92,11 +75,7 @@ public class ModConfig {
             }
 
         } catch (Exception e) {
-
-            System.err.println(
-                    "[LevelHead] Failed to load config"
-            );
-
+            System.err.println("[LevelHead] Failed to load config");
             e.printStackTrace();
         }
     }
@@ -104,24 +83,15 @@ public class ModConfig {
     public void save() {
 
         try {
+            FileWriter writer = new FileWriter(file);
 
-            FileWriter writer =
-                    new FileWriter(file);
-
-            gson.toJson(
-                    data,
-                    writer
-            );
+            gson.toJson(data, writer);
 
             writer.flush();
             writer.close();
 
         } catch (Exception e) {
-
-            System.err.println(
-                    "[LevelHead] Failed to save config"
-            );
-
+            System.err.println("[LevelHead] Failed to save config");
             e.printStackTrace();
         }
     }
@@ -129,117 +99,73 @@ public class ModConfig {
     public ApiMode getApiMode() {
 
         try {
-
-            return ApiMode.valueOf(
-                    data.apiMode.toUpperCase()
-            );
-
+            return ApiMode.valueOf(data.apiMode.toUpperCase());
         } catch (Exception e) {
-
             return ApiMode.HYPIXEL;
         }
     }
 
     public void setApiMode(ApiMode mode) {
-
-        data.apiMode =
-                mode.name();
-
+        data.apiMode = mode.name();
         save();
     }
 
     public String getHypixelApiKey() {
-
         return data.hypixelApiKey;
     }
 
-    public void setHypixelApiKey(
-            String key
-    ) {
-
+    public void setHypixelApiKey(String key) {
         data.hypixelApiKey = key;
-
         save();
     }
 
     public String getCustomApiUrl() {
-
         return data.customApiUrl;
     }
 
-    public void setCustomApiUrl(
-            String url
-    ) {
-
+    public void setCustomApiUrl(String url) {
         data.customApiUrl = url;
-
         save();
     }
 
     public long getCacheDurationMillis() {
-
-        return data.cacheDurationHours
-                * 60L
-                * 60L
-                * 1000L;
+        return data.cacheDurationHours * 60L * 60L * 1000L;
     }
 
     public long getCacheDurationHours() {
-
         return data.cacheDurationHours;
     }
 
-    public void setCacheDurationHours(
-            long hours
-    ) {
-
-        data.cacheDurationHours =
-                Math.max(1, hours);
-
+    public void setCacheDurationHours(long hours) {
+        data.cacheDurationHours = Math.max(1, hours);
         save();
     }
 
     public int getMaxCacheSize() {
-
         return data.maxCacheSize;
     }
 
-    public void setMaxCacheSize(
-            int size
-    ) {
-
-        data.maxCacheSize =
-                Math.max(100, size);
-
+    public void setMaxCacheSize(int size) {
+        data.maxCacheSize = Math.max(100, size);
         save();
     }
 
     public LevelType getLevelType() {
-
         try {
-
-            return LevelType.valueOf(
-                    data.levelType.toUpperCase()
-            );
+            return LevelType.valueOf(data.levelType.toUpperCase());
 
         } catch (Exception e) {
-
             return LevelType.HYPIXEL;
+
         }
     }
 
-    public void setLevelType(
-            LevelType type
-    ) {
-
-        data.levelType =
-                type.name();
-
+    public void setLevelType(LevelType type) {
+        data.levelType = type.name();
         save();
     }
 
     public File getFile() {
-
         return file;
     }
 }

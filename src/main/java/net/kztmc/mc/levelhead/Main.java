@@ -39,9 +39,6 @@ public class Main {
 
     private final Minecraft mc = Minecraft.getMinecraft();
 
-    /**
-     * TABのチェック用タイマー
-     */
     private int tabCheckTimer = 0;
 
     @Mod.EventHandler
@@ -57,16 +54,12 @@ public class Main {
     @Mod.EventHandler
     public void init(FMLInitializationEvent event) {
         MinecraftForge.EVENT_BUS.register(new PlayerLevelRenderer());
-
         MinecraftForge.EVENT_BUS.register(new LevelHeadCommand());
-
         MinecraftForge.EVENT_BUS.register(this);
     }
 
     public static void rebuildApiClient() {
-        if (CONFIG == null) {
-            return;
-        }
+        if (CONFIG == null) return;
 
         if (CONFIG.getApiMode() == ModConfig.ApiMode.HYPIXEL) {
             apiClient = new HypixelApiClient(CONFIG.getHypixelApiKey());
@@ -90,64 +83,36 @@ public class Main {
     @SubscribeEvent
     public void onClientTick(TickEvent.ClientTickEvent event) {
 
-        if (event.phase != TickEvent.Phase.END) {
-            return;
-        }
+        if (event.phase != TickEvent.Phase.END) return;
+        if (mc.theWorld == null || mc.thePlayer == null) return;
 
-        if (mc.theWorld == null || mc.thePlayer == null) {
-            return;
-        }
-
-        // 20 tick = 約1秒
         tabCheckTimer++;
 
-        if (tabCheckTimer < 20) {
-            return;
-        }
-
+        if (tabCheckTimer < 20) return;
         tabCheckTimer = 0;
 
-        if (mc.getNetHandler() == null) {
-            return;
-        }
-
-        Collection<NetworkPlayerInfo> players =
-                mc.getNetHandler().getPlayerInfoMap();
-
+        if (mc.getNetHandler() == null) return;
+        Collection<NetworkPlayerInfo> players = mc.getNetHandler().getPlayerInfoMap();
         int playerCount = players.size();
 
-        // TABが24人以上なら何もしない
-        if (playerCount >= 24) {
-            return;
-        }
+        if (playerCount >= 24) return;
 
-        // TABにいる全員をNORMALでキューに入れる
         for (NetworkPlayerInfo info : players) {
+            if (info == null || info.getGameProfile() == null) continue;
 
-            if (info == null || info.getGameProfile() == null) {
-                continue;
-            }
-
-            CACHE.get(
-                    info.getGameProfile().getId(),
-                    PlayerStatsCache.Priority.NORMAL
-            );
+            CACHE.get(info.getGameProfile().getId(), PlayerStatsCache.Priority.NORMAL);
         }
     }
 
     @SubscribeEvent
     public void onPlayerLoggedOut(PlayerEvent.PlayerLoggedOutEvent event) {
-        if (event.player == null) {
-            return;
-        }
+        if (event.player == null) return;
 
         CACHE.remove(event.player.getUniqueID());
     }
 
     @SubscribeEvent
-    public void onWorldUnload(
-            WorldEvent.Unload event
-    ) {
+    public void onWorldUnload(WorldEvent.Unload event) {
 
         if (CACHE != null) {
             CACHE.resetQueue();

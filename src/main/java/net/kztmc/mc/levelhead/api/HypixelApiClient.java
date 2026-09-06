@@ -17,461 +17,177 @@ import java.util.UUID;
 
 public class HypixelApiClient implements ApiClient {
 
-    private static final String API_URL =
-            "https://api.hypixel.net/v2/player?uuid=";
+    private static final String API_URL = "https://api.hypixel.net/v2/player?uuid=";
 
     private final String apiKey;
 
-    public HypixelApiClient(
-            String apiKey
-    ) {
-
+    public HypixelApiClient(String apiKey) {
         this.apiKey = apiKey;
     }
 
     @Override
-    public PlayerStats fetchPlayer(
-            UUID uuid
-    ) throws Exception {
+    public PlayerStats fetchPlayer(UUID uuid) throws Exception {
 
-        HttpURLConnection connection =
-                null;
+        HttpURLConnection connection = null;
 
         try {
+            URL url = new URL(API_URL + uuid.toString());
+            connection = (HttpURLConnection) url.openConnection();
 
-            URL url =
-                    new URL(
-                            API_URL
-                                    + uuid.toString()
-                    );
+            connection.setRequestProperty("Api-Key", apiKey);
+            connection.setRequestProperty("Accept", "application/json");
 
-            connection =
-                    (HttpURLConnection)
-                            url.openConnection();
+            connection.setConnectTimeout(10000);
+            connection.setReadTimeout(10000);
 
-            /*
-             * API Key
-             */
-            connection.setRequestProperty(
-                    "Api-Key",
-                    apiKey
-            );
+            connection.setRequestMethod("GET");
 
-            /*
-             * JSON
-             */
-            connection.setRequestProperty(
-                    "Accept",
-                    "application/json"
-            );
+            int statusCode = connection.getResponseCode();
 
-            /*
-             * Timeout
-             */
-            connection.setConnectTimeout(
-                    10000
-            );
-
-            connection.setReadTimeout(
-                    10000
-            );
-
-            /*
-             * GET
-             */
-            connection.setRequestMethod(
-                    "GET"
-            );
-
-            int statusCode =
-                    connection.getResponseCode();
-
-            /*
-             * Rate Limit
-             */
             if (statusCode == 429) {
-
-                String body =
-                        readErrorStream(
-                                connection
-                        );
-
-                throw new HypixelApiException(
-                        429,
-                        "Hypixel API rate limited"
-                                + (
-                                body.isEmpty()
-                                        ? ""
-                                        : ": " + body
-                        )
-                );
+                String body = readErrorStream(connection);
+                throw new HypixelApiException(429, "Hypixel API rate limited" + (body.isEmpty() ? "" : ": " + body));
             }
 
-            /*
-             * API Key error
-             */
             if (statusCode == 403) {
-
-                String body =
-                        readErrorStream(
-                                connection
-                        );
-
-                throw new HypixelApiException(
-                        403,
-                        "Hypixel API access forbidden"
-                                + (
-                                body.isEmpty()
-                                        ? ""
-                                        : ": " + body
-                        )
-                );
+                String body = readErrorStream(connection);
+                throw new HypixelApiException(403, "Hypixel API access forbidden" + (body.isEmpty() ? "" : ": " + body));
             }
 
-            /*
-             * Other HTTP errors
-             */
-            if (statusCode < 200
-                    || statusCode >= 300) {
 
-                String body =
-                        readErrorStream(
-                                connection
-                        );
-
-                throw new HypixelApiException(
-                        statusCode,
-                        "Hypixel API returned HTTP "
-                                + statusCode
-                                + (
-                                body.isEmpty()
-                                        ? ""
-                                        : ": " + body
-                        )
-                );
+            if (statusCode < 200 || statusCode >= 300) {
+                String body = readErrorStream(connection);
+                throw new HypixelApiException(statusCode, "Hypixel API returned HTTP " + statusCode + (body.isEmpty() ? "" : ": " + body));
             }
 
-            /*
-             * Response
-             */
-            String response =
-                    readInputStream(
-                            connection.getInputStream()
-                    );
 
-            if (response == null
-                    || response.isEmpty()) {
-
-                throw new Exception(
-                        "Hypixel API returned empty response"
-                );
+            String response = readInputStream(connection.getInputStream());
+            if (response == null || response.isEmpty()) {
+                throw new Exception("Hypixel API returned empty response");
             }
 
-            /*
-             * JSON
-             */
-            JsonObject root =
-                    new JsonParser()
-                            .parse(response)
-                            .getAsJsonObject();
+            JsonObject root = new JsonParser().parse(response).getAsJsonObject();
+            JsonElement successElement = root.get("success");
 
-            /*
-             * success
-             */
-            JsonElement successElement =
-                    root.get("success");
+            if (successElement != null && !successElement.getAsBoolean()) {
+                String cause = getString(root, "cause");
 
-            if (successElement != null
-                    && !successElement
-                    .getAsBoolean()) {
-
-                String cause =
-                        getString(
-                                root,
-                                "cause"
-                        );
-
-                /*
-                 * throttle
-                 */
-                if (root.has("throttle")
-                        && root.get("throttle")
-                        .getAsBoolean()) {
-
-                    throw new HypixelApiException(
-                            429,
-                            "Hypixel API throttle"
-                                    + (
-                                    cause == null
-                                            ? ""
-                                            : ": " + cause
-                            )
-                    );
+                if (root.has("throttle") && root.get("throttle").getAsBoolean()) {
+                    throw new HypixelApiException(429, "Hypixel API throttle" + (cause == null ? "" : ": " + cause));
                 }
 
-                throw new HypixelApiException(
-                        0,
-                        "Hypixel API request failed"
-                                + (
-                                cause == null
-                                        ? ""
-                                        : ": " + cause
-                        )
-                );
+                throw new HypixelApiException(0, "Hypixel API request failed" + (cause == null ? "" : ": " + cause));
             }
 
-            /*
-             * player
-             */
-            JsonElement playerElement =
-                    root.get("player");
 
-            if (playerElement == null
-                    || playerElement.isJsonNull()) {
+            JsonElement playerElement = root.get("player");
 
+            if (playerElement == null || playerElement.isJsonNull()) {
                 return null;
             }
 
-            JsonObject player =
-                    playerElement
-                            .getAsJsonObject();
-
-            /*
-             * 名前
-             */
-            String name =
-                    getString(
-                            player,
-                            "displayname"
-                    );
+            JsonObject player = playerElement.getAsJsonObject();
+            String name = getString(player, "displayname");
 
             int hypixelLevel = 0;
             int bedwarsLevel = 0;
 
-            /*
-             * 選択されているレベルだけ取得。
-             */
-            ModConfig.LevelType levelType =
-                    Main.CONFIG.getLevelType();
+            ModConfig.LevelType levelType = Main.CONFIG.getLevelType();
 
-            if (levelType
-                    == ModConfig.LevelType.HYPIXEL) {
+            if (levelType == ModConfig.LevelType.HYPIXEL) {
+                double networkExp = getDouble(player, "networkExp", 0.0D);
+                hypixelLevel = getNetworkLevel(networkExp);
 
-                /*
-                 * Network XP
-                 */
-                double networkExp =
-                        getDouble(
-                                player,
-                                "networkExp",
-                                0.0D
-                        );
-
-                hypixelLevel =
-                        getNetworkLevel(
-                                networkExp
-                        );
-
-            } else if (levelType
-                    == ModConfig.LevelType.BEDWARS) {
-
-                /*
-                 * BedWars Level
-                 */
-                JsonObject achievements =
-                        getObject(
-                                player,
-                                "achievements"
-                        );
+            } else if (levelType == ModConfig.LevelType.BEDWARS) {
+                JsonObject achievements = getObject(player, "achievements");
 
                 if (achievements != null) {
-
-                    bedwarsLevel =
-                            getInt(
-                                    achievements,
-                                    "bedwars_level",
-                                    0
-                            );
+                    bedwarsLevel = getInt(achievements, "bedwars_level", 0);
                 }
             }
 
-            return new PlayerStats(
-                    name,
-                    hypixelLevel,
-                    bedwarsLevel
-            );
+            return new PlayerStats(name, hypixelLevel, bedwarsLevel);
 
         } finally {
-
-            if (connection != null) {
-                connection.disconnect();
-            }
+            if (connection != null) {connection.disconnect();}
         }
     }
 
-    private String readInputStream(
-            InputStream input
-    ) throws Exception {
+    private String readInputStream(InputStream input) throws Exception {
 
-        StringBuilder result =
-                new StringBuilder();
+        StringBuilder result = new StringBuilder();
 
-        BufferedReader reader =
-                new BufferedReader(
-                        new InputStreamReader(
-                                input,
-                                StandardCharsets.UTF_8
-                        )
-                );
+        BufferedReader reader = new BufferedReader(new InputStreamReader(input, StandardCharsets.UTF_8));
 
         try {
-
             String line;
-
-            while (
-                    (line = reader.readLine())
-                            != null
-            ) {
-
-                result.append(line);
-            }
+            while ((line = reader.readLine()) != null) result.append(line);
 
         } finally {
-
             reader.close();
         }
-
         return result.toString();
     }
 
-    private String readErrorStream(
-            HttpURLConnection connection
-    ) {
+    private String readErrorStream(HttpURLConnection connection) {
+        InputStream input = connection.getErrorStream();
 
-        InputStream input =
-                connection.getErrorStream();
-
-        if (input == null) {
-            return "";
-        }
+        if (input == null) return "";
 
         try {
-
-            return readInputStream(
-                    input
-            );
-
+            return readInputStream(input);
         } catch (Exception e) {
-
             return "";
         }
     }
 
-    private String getString(
-            JsonObject object,
-            String key
-    ) {
+    private String getString(JsonObject object, String key) {
+        JsonElement element = object.get(key);
 
-        JsonElement element =
-                object.get(key);
-
-        if (element == null
-                || element.isJsonNull()) {
-
+        if (element == null || element.isJsonNull()) {
             return null;
         }
 
         try {
-
             return element.getAsString();
-
         } catch (Exception e) {
-
             return null;
         }
     }
 
-    private double getDouble(
-            JsonObject object,
-            String key,
-            double defaultValue
-    ) {
+    private double getDouble(JsonObject object, String key, double defaultValue) {
+        JsonElement element = object.get(key);
 
-        JsonElement element =
-                object.get(key);
-
-        if (element == null
-                || element.isJsonNull()) {
-
-            return defaultValue;
-        }
+        if (element == null || element.isJsonNull()) return defaultValue;
 
         try {
-
             return element.getAsDouble();
-
         } catch (Exception e) {
-
             return defaultValue;
         }
     }
 
-    private int getInt(
-            JsonObject object,
-            String key,
-            int defaultValue
-    ) {
+    private int getInt(JsonObject object, String key, int defaultValue) {
+        JsonElement element = object.get(key);
 
-        JsonElement element =
-                object.get(key);
-
-        if (element == null
-                || element.isJsonNull()) {
-
-            return defaultValue;
-        }
+        if (element == null || element.isJsonNull()) return defaultValue;
 
         try {
-
             return element.getAsInt();
-
         } catch (Exception e) {
-
             return defaultValue;
         }
     }
 
-    private JsonObject getObject(
-            JsonObject object,
-            String key
-    ) {
+    private JsonObject getObject(JsonObject object, String key) {
+        JsonElement element = object.get(key);
 
-        JsonElement element =
-                object.get(key);
-
-        if (element == null
-                || element.isJsonNull()
-                || !element.isJsonObject()) {
-
-            return null;
-        }
+        if (element == null || element.isJsonNull() || !element.isJsonObject()) return null;
 
         return element.getAsJsonObject();
     }
 
-    /*
-     * Network XP → Network Level
-     *
-     * 現在の簡易計算。
-     *
-     * ここは次にHypixelの正式な
-     * 累積XPテーブル方式へ変更する。
-     */
-    private int getNetworkLevel(
-            double networkExp
-    ) {
-
-        return (int)
-                (networkExp / 10000.0D);
+    private int getNetworkLevel(double networkExp) {
+        return (int) (networkExp / 10000.0D);
     }
 }
