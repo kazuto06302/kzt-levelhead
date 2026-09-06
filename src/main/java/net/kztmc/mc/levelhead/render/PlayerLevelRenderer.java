@@ -3,6 +3,7 @@ package net.kztmc.mc.levelhead.render;
 import net.kztmc.mc.levelhead.Main;
 import net.kztmc.mc.levelhead.cache.PlayerStats;
 import net.kztmc.mc.levelhead.cache.PlayerStatsCache;
+import net.kztmc.mc.levelhead.config.ModConfig;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.FontRenderer;
 import net.minecraft.entity.player.EntityPlayer;
@@ -24,14 +25,7 @@ public class PlayerLevelRenderer {
                 event.entityPlayer;
 
         /*
-         * 自分自身には表示しない。
-         */
-        if (player == mc.thePlayer) {
-            return;
-        }
-
-        /*
-         * 距離を計算。
+         * 距離。
          */
         float distance =
                 player.getDistanceToEntity(
@@ -40,19 +34,13 @@ public class PlayerLevelRenderer {
 
         /*
          * 64ブロック以上は対象外。
-         *
-         * APIリクエストも発生させない。
          */
         if (distance > 64.0F) {
             return;
         }
 
         /*
-         * 距離によってAPIリクエストの優先度を決定。
-         *
-         * 0～16   : HIGH
-         * 16～48  : NORMAL
-         * 48～64  : LOW
+         * 距離によって優先度を決定。
          */
         PlayerStatsCache.Priority priority;
 
@@ -74,13 +62,6 @@ public class PlayerLevelRenderer {
 
         /*
          * キャッシュから取得。
-         *
-         * キャッシュがなければ null が返り、
-         * 裏でAPIリクエストがキューに追加される。
-         *
-         * キャッシュが期限切れの場合も、
-         * 古いデータを表示しながら
-         * 裏で更新される。
          */
         PlayerStats stats =
                 Main.CACHE.get(
@@ -109,53 +90,61 @@ public class PlayerLevelRenderer {
             PlayerStats stats
     ) {
 
-        StringBuilder text =
-                new StringBuilder();
-
         /*
-         * Hypixel Network Level
+         * 表示するレベル。
          */
-        if (Main.CONFIG.isShowHypixelLevel()) {
+        String text;
 
-            text.append("§b")
-                    .append(stats.getHypixelLevel())
-                    .append("§f");
+        ModConfig.LevelType levelType =
+                Main.CONFIG.getLevelType();
 
-            if (Main.CONFIG.isShowBedwarsLevel()) {
-                text.append(" §7| ");
-            }
+        if (levelType
+                == ModConfig.LevelType.HYPIXEL) {
+
+            /*
+             * Network Level
+             */
+            text =
+                    "§b"
+                            + stats.getHypixelLevel()
+                            + "§f";
+
+        } else {
+
+            /*
+             * BedWars Level
+             */
+            text =
+                    "§a"
+                            + stats.getBedwarsLevel()
+                            + "✫";
         }
 
         /*
-         * BedWars Level
+         * FontRenderer
          */
-        if (Main.CONFIG.isShowBedwarsLevel()) {
-
-            text.append("§a")
-                    .append(stats.getBedwarsLevel())
-                    .append("✫");
-        }
-
-        /*
-         * 何も表示しない設定なら終了。
-         */
-        if (text.length() == 0) {
-            return;
-        }
-
         FontRenderer font =
                 mc.fontRendererObj;
 
+        /*
+         * Minecraftの名前表示と同じサイズ。
+         */
         float scale =
                 0.016666668F;
 
         GL11.glPushMatrix();
 
+        /*
+         * 名前の上に表示。
+         *
+         * Vanillaの名前表示より
+         * 少し上にずらす。
+         */
         GL11.glTranslatef(
                 (float) x,
                 (float) y
                         + player.height
-                        + 0.5F,
+                        + 0.75F,
                 (float) z
         );
 
@@ -188,7 +177,7 @@ public class PlayerLevelRenderer {
         );
 
         /*
-         * ライティングを無効化。
+         * Lighting OFF
          */
         GL11.glDisable(
                 GL11.GL_LIGHTING
@@ -202,7 +191,7 @@ public class PlayerLevelRenderer {
         );
 
         /*
-         * 半透明背景のためBlendを有効化。
+         * 背景の透明処理。
          */
         GL11.glEnable(
                 GL11.GL_BLEND
@@ -214,18 +203,18 @@ public class PlayerLevelRenderer {
         );
 
         /*
-         * テキスト幅を取得。
+         * テキスト幅。
          */
         int width =
                 font.getStringWidth(
-                        text.toString()
+                        text
                 );
 
         float drawX =
                 -width / 2.0F;
 
         /*
-         * 黒い半透明背景。
+         * 背景。
          */
         drawBackground(
                 drawX - 2,
@@ -235,17 +224,17 @@ public class PlayerLevelRenderer {
         );
 
         /*
-         * テキスト描画。
+         * テキスト。
          */
         font.drawStringWithShadow(
-                text.toString(),
+                text,
                 drawX,
                 0,
                 0xFFFFFF
         );
 
         /*
-         * GL状態を元に戻す。
+         * GL状態を戻す。
          */
         GL11.glDisable(
                 GL11.GL_BLEND

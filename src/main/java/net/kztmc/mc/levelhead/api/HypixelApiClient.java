@@ -3,7 +3,9 @@ package net.kztmc.mc.levelhead.api;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import net.kztmc.mc.levelhead.Main;
 import net.kztmc.mc.levelhead.cache.PlayerStats;
+import net.kztmc.mc.levelhead.config.ModConfig;
 
 import java.io.BufferedReader;
 import java.io.InputStream;
@@ -20,7 +22,10 @@ public class HypixelApiClient implements ApiClient {
 
     private final String apiKey;
 
-    public HypixelApiClient(String apiKey) {
+    public HypixelApiClient(
+            String apiKey
+    ) {
+
         this.apiKey = apiKey;
     }
 
@@ -29,7 +34,8 @@ public class HypixelApiClient implements ApiClient {
             UUID uuid
     ) throws Exception {
 
-        HttpURLConnection connection = null;
+        HttpURLConnection connection =
+                null;
 
         try {
 
@@ -52,7 +58,7 @@ public class HypixelApiClient implements ApiClient {
             );
 
             /*
-             * JSONを要求。
+             * JSON
              */
             connection.setRequestProperty(
                     "Accept",
@@ -60,7 +66,7 @@ public class HypixelApiClient implements ApiClient {
             );
 
             /*
-             * タイムアウト。
+             * Timeout
              */
             connection.setConnectTimeout(
                     10000
@@ -81,9 +87,7 @@ public class HypixelApiClient implements ApiClient {
                     connection.getResponseCode();
 
             /*
-             * HTTP 429
-             *
-             * Hypixel APIのレート制限。
+             * Rate Limit
              */
             if (statusCode == 429) {
 
@@ -104,7 +108,7 @@ public class HypixelApiClient implements ApiClient {
             }
 
             /*
-             * API Key不正など。
+             * API Key error
              */
             if (statusCode == 403) {
 
@@ -125,7 +129,7 @@ public class HypixelApiClient implements ApiClient {
             }
 
             /*
-             * その他HTTPエラー。
+             * Other HTTP errors
              */
             if (statusCode < 200
                     || statusCode >= 300) {
@@ -148,7 +152,7 @@ public class HypixelApiClient implements ApiClient {
             }
 
             /*
-             * 正常レスポンス。
+             * Response
              */
             String response =
                     readInputStream(
@@ -164,7 +168,7 @@ public class HypixelApiClient implements ApiClient {
             }
 
             /*
-             * JSON解析。
+             * JSON
              */
             JsonObject root =
                     new JsonParser()
@@ -172,16 +176,14 @@ public class HypixelApiClient implements ApiClient {
                             .getAsJsonObject();
 
             /*
-             * success=false
+             * success
              */
             JsonElement successElement =
                     root.get("success");
 
-            if (
-                    successElement != null
-                            && !successElement
-                            .getAsBoolean()
-            ) {
+            if (successElement != null
+                    && !successElement
+                    .getAsBoolean()) {
 
                 String cause =
                         getString(
@@ -190,14 +192,11 @@ public class HypixelApiClient implements ApiClient {
                         );
 
                 /*
-                 * 念のため、JSON側でも
-                 * throttleを429として扱う。
+                 * throttle
                  */
-                if (
-                        root.has("throttle")
-                                && root.get("throttle")
-                                .getAsBoolean()
-                ) {
+                if (root.has("throttle")
+                        && root.get("throttle")
+                        .getAsBoolean()) {
 
                     throw new HypixelApiException(
                             429,
@@ -222,20 +221,14 @@ public class HypixelApiClient implements ApiClient {
             }
 
             /*
-             * playerが存在しない場合。
+             * player
              */
             JsonElement playerElement =
                     root.get("player");
 
-            if (
-                    playerElement == null
-                            || playerElement.isJsonNull()
-            ) {
+            if (playerElement == null
+                    || playerElement.isJsonNull()) {
 
-                /*
-                 * UUIDは存在するが
-                 * Hypixelにデータがない場合など。
-                 */
                 return null;
             }
 
@@ -244,7 +237,7 @@ public class HypixelApiClient implements ApiClient {
                             .getAsJsonObject();
 
             /*
-             * 名前。
+             * 名前
              */
             String name =
                     getString(
@@ -252,40 +245,54 @@ public class HypixelApiClient implements ApiClient {
                             "displayname"
                     );
 
-            /*
-             * Network Level
-             */
-            double networkExp =
-                    getDouble(
-                            player,
-                            "networkExp",
-                            0.0D
-                    );
-
-            int hypixelLevel =
-                    getNetworkLevel(
-                            networkExp
-                    );
-
-            /*
-             * BedWars Level
-             */
-            JsonObject achievements =
-                    getObject(
-                            player,
-                            "achievements"
-                    );
-
+            int hypixelLevel = 0;
             int bedwarsLevel = 0;
 
-            if (achievements != null) {
+            /*
+             * 選択されているレベルだけ取得。
+             */
+            ModConfig.LevelType levelType =
+                    Main.CONFIG.getLevelType();
 
-                bedwarsLevel =
-                        getInt(
-                                achievements,
-                                "bedwars_level",
-                                0
+            if (levelType
+                    == ModConfig.LevelType.HYPIXEL) {
+
+                /*
+                 * Network XP
+                 */
+                double networkExp =
+                        getDouble(
+                                player,
+                                "networkExp",
+                                0.0D
                         );
+
+                hypixelLevel =
+                        getNetworkLevel(
+                                networkExp
+                        );
+
+            } else if (levelType
+                    == ModConfig.LevelType.BEDWARS) {
+
+                /*
+                 * BedWars Level
+                 */
+                JsonObject achievements =
+                        getObject(
+                                player,
+                                "achievements"
+                        );
+
+                if (achievements != null) {
+
+                    bedwarsLevel =
+                            getInt(
+                                    achievements,
+                                    "bedwars_level",
+                                    0
+                            );
+                }
             }
 
             return new PlayerStats(
@@ -302,9 +309,6 @@ public class HypixelApiClient implements ApiClient {
         }
     }
 
-    /*
-     * InputStreamを文字列化。
-     */
     private String readInputStream(
             InputStream input
     ) throws Exception {
@@ -333,15 +337,13 @@ public class HypixelApiClient implements ApiClient {
             }
 
         } finally {
+
             reader.close();
         }
 
         return result.toString();
     }
 
-    /*
-     * エラーレスポンスを読む。
-     */
     private String readErrorStream(
             HttpURLConnection connection
     ) {
@@ -355,7 +357,9 @@ public class HypixelApiClient implements ApiClient {
 
         try {
 
-            return readInputStream(input);
+            return readInputStream(
+                    input
+            );
 
         } catch (Exception e) {
 
@@ -363,9 +367,6 @@ public class HypixelApiClient implements ApiClient {
         }
     }
 
-    /*
-     * JsonObjectからStringを取得。
-     */
     private String getString(
             JsonObject object,
             String key
@@ -374,23 +375,22 @@ public class HypixelApiClient implements ApiClient {
         JsonElement element =
                 object.get(key);
 
-        if (
-                element == null
-                        || element.isJsonNull()
-        ) {
+        if (element == null
+                || element.isJsonNull()) {
+
             return null;
         }
 
         try {
+
             return element.getAsString();
+
         } catch (Exception e) {
+
             return null;
         }
     }
 
-    /*
-     * JsonObjectからdoubleを取得。
-     */
     private double getDouble(
             JsonObject object,
             String key,
@@ -400,23 +400,22 @@ public class HypixelApiClient implements ApiClient {
         JsonElement element =
                 object.get(key);
 
-        if (
-                element == null
-                        || element.isJsonNull()
-        ) {
+        if (element == null
+                || element.isJsonNull()) {
+
             return defaultValue;
         }
 
         try {
+
             return element.getAsDouble();
+
         } catch (Exception e) {
+
             return defaultValue;
         }
     }
 
-    /*
-     * JsonObjectからintを取得。
-     */
     private int getInt(
             JsonObject object,
             String key,
@@ -426,23 +425,22 @@ public class HypixelApiClient implements ApiClient {
         JsonElement element =
                 object.get(key);
 
-        if (
-                element == null
-                        || element.isJsonNull()
-        ) {
+        if (element == null
+                || element.isJsonNull()) {
+
             return defaultValue;
         }
 
         try {
+
             return element.getAsInt();
+
         } catch (Exception e) {
+
             return defaultValue;
         }
     }
 
-    /*
-     * JsonObjectを取得。
-     */
     private JsonObject getObject(
             JsonObject object,
             String key
@@ -451,11 +449,10 @@ public class HypixelApiClient implements ApiClient {
         JsonElement element =
                 object.get(key);
 
-        if (
-                element == null
-                        || element.isJsonNull()
-                        || !element.isJsonObject()
-        ) {
+        if (element == null
+                || element.isJsonNull()
+                || !element.isJsonObject()) {
+
             return null;
         }
 
@@ -463,22 +460,17 @@ public class HypixelApiClient implements ApiClient {
     }
 
     /*
-     * Hypixel Network XP → Level
+     * Network XP → Network Level
      *
-     * ここは後で正確なHypixelの
-     * レベル計算式に置き換える。
+     * 現在の簡易計算。
+     *
+     * ここは次にHypixelの正式な
+     * 累積XPテーブル方式へ変更する。
      */
     private int getNetworkLevel(
             double networkExp
     ) {
 
-        /*
-         * 現在の実装を維持する場合はここ。
-         *
-         * XP / 10000 の単純計算ではなく、
-         * Hypixelの実際の累積XPテーブルを
-         * 後で実装する。
-         */
         return (int)
                 (networkExp / 10000.0D);
     }
