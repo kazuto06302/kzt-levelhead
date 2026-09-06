@@ -6,20 +6,18 @@ import net.kztmc.mc.levelhead.api.HypixelApiException;
 import net.kztmc.mc.levelhead.config.ModConfig;
 
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.PriorityQueue;
 import java.util.Set;
-import java.util.HashSet;
 import java.util.UUID;
 
 public class PlayerStatsCache {
 
     /*
-     * リクエストの優先度。
-     *
-     * 数字が小さいほど高優先度。
+     * APIリクエストの優先度。
      */
     public enum Priority {
 
@@ -35,27 +33,56 @@ public class PlayerStatsCache {
     }
 
     /*
+     * API取得完了時のCallback。
+     *
+     * 現在はCache内部で使用するが、
+     * 後からUI更新などにも利用できる。
+     */
+    public interface Callback {
+
+        void onSuccess(
+                UUID uuid,
+                PlayerStats stats
+        );
+
+        void onFailure(
+                UUID uuid,
+                Exception exception
+        );
+    }
+
+    /*
      * APIリクエスト。
      */
     private static class Request
             implements Comparable<Request> {
 
         private final UUID uuid;
+
         private Priority priority;
+
+        private final Callback callback;
 
         private final long createdAt;
 
         Request(
                 UUID uuid,
-                Priority priority
+                Priority priority,
+                Callback callback
         ) {
+
             this.uuid = uuid;
             this.priority = priority;
-            this.createdAt = System.nanoTime();
+            this.callback = callback;
+
+            this.createdAt =
+                    System.nanoTime();
         }
 
         @Override
-        public int compareTo(Request other) {
+        public int compareTo(
+                Request other
+        ) {
 
             int priorityCompare =
                     Integer.compare(
@@ -67,9 +94,6 @@ public class PlayerStatsCache {
                 return priorityCompare;
             }
 
-            /*
-             * 同じ優先度なら古いリクエストを先に処理。
-             */
             return Long.compare(
                     createdAt,
                     other.createdAt
@@ -80,10 +104,7 @@ public class PlayerStatsCache {
     private final ModConfig config;
 
     /*
-     * キャッシュ本体。
-     *
-     * accessOrder=true にして、
-     * 最近使われたものを後ろにする。
+     * キャッシュ。
      */
     private final Map<UUID, CachedPlayerStats> cache =
             new LinkedHashMap<UUID, CachedPlayerStats>(
@@ -93,79 +114,54 @@ public class PlayerStatsCache {
             );
 
     /*
-     * 現在キューに入っているUUID。
+     * 現在queueに入っているUUID。
      */
     private final Set<UUID> pending =
             new HashSet<UUID>();
 
     /*
-     * 実際のRequestをUUIDごとに保持。
+     * UUID → Request。
      *
-     * LOW → HIGH の優先度変更時に
-     * 古いRequestを削除するために使用する。
+     * 優先度昇格に使用。
      */
     private final Map<UUID, Request> requests =
             new HashMap<UUID, Request>();
 
     /*
-     * リクエストキュー。
+     * API Request Queue。
      */
     private final PriorityQueue<Request> queue =
             new PriorityQueue<Request>();
 
     /*
-     * API処理専用スレッド。
+     * API worker。
      *
-     * 必ず1本だけ。
+     * APIアクセスはこのスレッドだけが行う。
      */
     private final Thread worker;
 
     /*
-     * 初期リクエスト間隔。
+     * 1秒間に最大2リクエスト。
      *
-     * 1200ms = 約1.2秒
+     * 500ms = 2 requests/sec
      */
-    private static final long INITIAL_INTERVAL = 1200L;
+    private static final long REQUEST_INTERVAL = 500L;
 
     /*
-     * 通常時の最低間隔。
+     * ワールド世代。
+     *
+     * ワールドが変わるたびに増やす。
+     *
+     * 古いワールドからのAPIレスポンスを
+     * 新しいワールドに混ぜないために使う。
      */
-    private static final long MIN_INTERVAL = 500L;
-
-    /*
-     * 通常時の最大間隔。
-     */
-    private static final long MAX_INTERVAL = 10000L;
-
-    /*
-     * 429発生時の初回待機時間。
-     */
-    private static final long INITIAL_BACKOFF = 5000L;
-
-    /*
-     * 最大バックオフ。
-     */
-    private static final long MAX_BACKOFF = 120000L;
+    private long worldGeneration = 0L;
 
     private volatile boolean running = true;
 
-    /*
-     * 現在のAPIリクエスト間隔。
-     */
-    private long requestInterval =
-            INITIAL_INTERVAL;
-
-    /*
-     * 次回APIリクエストまでの時刻。
-     */
-    private long nextRequestTime = 0L;
-
-    /*
-     * 429連続回数。
-     */
-    private int rateLimitCount = 0;
-
-    public PlayerStatsCache(ModConfig config) {
+    public PlayerStatsCache(
+            ModConfig config
+    ) {
 
         this.config = config;
 
@@ -179,9 +175,6 @@ public class PlayerStatsCache {
                 "LevelHead-API-Worker"
         );
 
-        /*
-         * Minecraft終了時にこのスレッドだけ残らないようにする。
-         */
         worker.setDaemon(true);
 
         worker.start();
@@ -190,7 +183,9 @@ public class PlayerStatsCache {
     /*
      * 通常取得。
      */
-    public PlayerStats get(UUID uuid) {
+    public PlayerStats get(
+            UUID uuid
+    ) {
 
         return get(
                 uuid,
@@ -210,13 +205,14 @@ public class PlayerStatsCache {
                 cache.get(uuid);
 
         /*
-         * キャッシュが存在しない。
+         * キャッシュなし。
          */
         if (cached == null) {
 
             enqueue(
                     uuid,
-                    priority
+                    priority,
+                    null
             );
 
             return null;
@@ -229,15 +225,18 @@ public class PlayerStatsCache {
         /*
          * キャッシュ期限切れ。
          *
-         * 古いデータはそのまま返す。
-         * 裏で更新する。
+         * 古いデータを表示しながら
+         * バックグラウンドで更新する。
          */
-        if (age >
-                config.getCacheDurationMillis()) {
+        if (
+                age >
+                        config.getCacheDurationMillis()
+        ) {
 
             enqueue(
                     uuid,
-                    priority
+                    priority,
+                    null
             );
         }
 
@@ -245,15 +244,16 @@ public class PlayerStatsCache {
     }
 
     /*
-     * リクエストをキューに追加。
+     * Requestをqueueへ追加。
      */
     private synchronized void enqueue(
             UUID uuid,
-            Priority priority
+            Priority priority,
+            Callback callback
     ) {
 
         /*
-         * すでにキューに存在する場合。
+         * すでにqueueにある。
          */
         if (pending.contains(uuid)) {
 
@@ -265,22 +265,21 @@ public class PlayerStatsCache {
             }
 
             /*
-             * 現在より高い優先度なら昇格。
+             * より高い優先度になった場合、
+             * Requestを入れ替える。
              */
-            if (priority.value <
-                    current.priority.value) {
+            if (
+                    priority.value
+                            < current.priority.value
+            ) {
 
-                /*
-                 * PriorityQueueの要素を直接変更すると
-                 * ヒープが壊れるので、
-                 * 古いRequestを削除して新しいものを入れる。
-                 */
                 queue.remove(current);
 
                 Request promoted =
                         new Request(
                                 uuid,
-                                priority
+                                priority,
+                                callback
                         );
 
                 requests.put(
@@ -295,12 +294,13 @@ public class PlayerStatsCache {
         }
 
         /*
-         * 新規リクエスト。
+         * 新しいRequest。
          */
         Request request =
                 new Request(
                         uuid,
-                        priority
+                        priority,
+                        callback
                 );
 
         pending.add(uuid);
@@ -313,24 +313,24 @@ public class PlayerStatsCache {
         queue.offer(request);
 
         /*
-         * workerが待機中なら起こす。
+         * Workerを起こす。
          */
         notifyAll();
     }
 
     /*
-     * APIキュー処理。
+     * Queue処理。
      */
     private void processQueue() {
 
         while (running) {
 
-            Request request = null;
+            Request request;
 
             synchronized (this) {
 
                 /*
-                 * キューが空なら待機。
+                 * Queueが空なら待機。
                  */
                 while (
                         running
@@ -339,7 +339,10 @@ public class PlayerStatsCache {
 
                     try {
                         wait();
-                    } catch (InterruptedException e) {
+
+                    } catch (
+                            InterruptedException e
+                    ) {
 
                         if (!running) {
                             return;
@@ -352,28 +355,8 @@ public class PlayerStatsCache {
                 }
 
                 /*
-                 * APIリクエスト間隔を待つ。
+                 * 最優先Requestを取得。
                  */
-                long now =
-                        System.currentTimeMillis();
-
-                long waitTime =
-                        nextRequestTime - now;
-
-                if (waitTime > 0) {
-
-                    try {
-                        wait(waitTime);
-                    } catch (InterruptedException e) {
-
-                        if (!running) {
-                            return;
-                        }
-                    }
-
-                    continue;
-                }
-
                 request =
                         queue.poll();
 
@@ -381,12 +364,6 @@ public class PlayerStatsCache {
                     continue;
                 }
 
-                /*
-                 * pendingからはここで削除。
-                 *
-                 * API実行中は再リクエストされないように、
-                 * requestsには残しておく。
-                 */
                 pending.remove(
                         request.uuid
                 );
@@ -397,18 +374,52 @@ public class PlayerStatsCache {
             }
 
             /*
-             * APIアクセス。
+             * APIリクエスト。
              */
             executeRequest(request);
+
+            /*
+             * 1リクエストにつき500ms待つ。
+             *
+             * 2 requests/sec。
+             */
+            if (!running) {
+                return;
+            }
+
+            try {
+
+                Thread.sleep(
+                        REQUEST_INTERVAL
+                );
+
+            } catch (
+                    InterruptedException e
+            ) {
+
+                if (!running) {
+                    return;
+                }
+            }
         }
     }
 
     /*
-     * 1件のAPIリクエストを実行。
+     * APIリクエスト実行。
      */
     private void executeRequest(
             Request request
     ) {
+
+        /*
+         * リクエスト開始時のWorld世代。
+         */
+        final long requestGeneration;
+
+        synchronized (this) {
+            requestGeneration =
+                    worldGeneration;
+        }
 
         try {
 
@@ -424,11 +435,24 @@ public class PlayerStatsCache {
                             request.uuid
                     );
 
-            if (stats == null) {
-                return;
-            }
-
+            /*
+             * API取得中にワールドが変わった。
+             *
+             * 古い結果は破棄。
+             */
             synchronized (this) {
+
+                if (
+                        requestGeneration
+                                != worldGeneration
+                ) {
+
+                    return;
+                }
+
+                if (stats == null) {
+                    return;
+                }
 
                 cache.put(
                         request.uuid,
@@ -441,49 +465,68 @@ public class PlayerStatsCache {
             }
 
             /*
-             * 成功したので429カウンターをリセット。
+             * Callback。
              */
-            synchronized (this) {
+            if (
+                    request.callback != null
+            ) {
 
-                rateLimitCount = 0;
-
-                /*
-                 * 徐々にリクエスト間隔を短くする。
-                 */
-                requestInterval =
-                        Math.max(
-                                MIN_INTERVAL,
-                                requestInterval * 9L / 10L
-                        );
-
-                /*
-                 * 次回リクエスト時刻。
-                 */
-                nextRequestTime =
-                        System.currentTimeMillis()
-                                + requestInterval;
+                request.callback.onSuccess(
+                        request.uuid,
+                        stats
+                );
             }
 
-        } catch (Exception e) {
+        } catch (
+                Exception e
+        ) {
 
+            /*
+             * 429の場合。
+             *
+             * ここでは指数バックオフをしない。
+             *
+             * 次のRequestまで500ms待つ。
+             */
             if (
                     e instanceof HypixelApiException
                             && ((HypixelApiException) e)
                             .isRateLimited()
             ) {
 
-                handleRateLimit();
+                System.err.println(
+                        "[LevelHead] Hypixel API "
+                                + "rate limited. "
+                                + "Request will be retried."
+                );
 
+                /*
+                 * 429なら再度queueへ。
+                 */
                 synchronized (this) {
 
-                    if (!pending.contains(
-                            request.uuid
-                    )) {
+                    /*
+                     * ワールドが変わっていたら
+                     * 再キューしない。
+                     */
+                    if (
+                            requestGeneration
+                                    != worldGeneration
+                    ) {
+                        return;
+                    }
+
+                    if (
+                            !pending.contains(
+                                    request.uuid
+                            )
+                    ) {
 
                         Request retry =
                                 new Request(
                                         request.uuid,
-                                        request.priority
+                                        request.priority,
+                                        request.callback
                                 );
 
                         pending.add(
@@ -501,81 +544,125 @@ public class PlayerStatsCache {
                     }
                 }
 
-            } else {
+                return;
+            }
 
-                System.err.println(
-                        "[LevelHead] Failed to fetch "
-                                + request.uuid
+            System.err.println(
+                    "[LevelHead] Failed to fetch "
+                            + request.uuid
+            );
+
+            e.printStackTrace();
+
+            if (
+                    request.callback != null
+            ) {
+
+                request.callback.onFailure(
+                        request.uuid,
+                        e
                 );
-
-                e.printStackTrace();
-
-                synchronized (this) {
-
-                    nextRequestTime =
-                            System.currentTimeMillis()
-                                    + requestInterval;
-                }
             }
         }
     }
 
     /*
-     * 429処理。
+     * ワールド変更時に呼ぶ。
+     *
+     * 重要：
+     *
+     * ・Queueを全消去
+     * ・pendingを全消去
+     * ・古いRequestを無効化
+     *
+     * キャッシュは消さない。
      */
-    private synchronized void handleRateLimit() {
+    public synchronized void resetQueue() {
 
-        rateLimitCount++;
+        worldGeneration++;
 
-        long backoff =
-                INITIAL_BACKOFF;
+        queue.clear();
 
-        /*
-         * 5 → 10 → 20 → 40 → 80 → 120秒
-         */
-        for (
-                int i = 1;
-                i < rateLimitCount;
-                i++
-        ) {
+        pending.clear();
 
-            if (backoff >=
-                    MAX_BACKOFF / 2) {
+        requests.clear();
 
-                backoff =
-                        MAX_BACKOFF;
-
-                break;
-            }
-
-            backoff *= 2L;
-        }
-
-        backoff =
-                Math.min(
-                        backoff,
-                        MAX_BACKOFF
-                );
-
-        System.err.println(
-                "[LevelHead] Hypixel API rate limited. "
-                        + "Backing off for "
-                        + backoff
-                        + "ms."
+        System.out.println(
+                "[LevelHead] API request queue reset."
+                        + " World generation: "
+                        + worldGeneration
         );
 
-        nextRequestTime =
-                System.currentTimeMillis()
-                        + backoff;
+        notifyAll();
+    }
 
-        /*
-         * 通常のリクエスト間隔も少し伸ばす。
-         */
-        requestInterval =
-                Math.min(
-                        MAX_INTERVAL,
-                        requestInterval * 2L
-                );
+    /*
+     * キャッシュも含めて全部消す。
+     */
+    public synchronized void clear() {
+
+        cache.clear();
+
+        queue.clear();
+
+        pending.clear();
+
+        requests.clear();
+
+        worldGeneration++;
+
+        notifyAll();
+    }
+
+    /*
+     * 特定UUIDのキャッシュ削除。
+     */
+    public synchronized void remove(
+            UUID uuid
+    ) {
+
+        cache.remove(uuid);
+
+        Request request =
+                requests.remove(uuid);
+
+        if (request != null) {
+            queue.remove(request);
+        }
+
+        pending.remove(uuid);
+    }
+
+    /*
+     * キャッシュサイズ。
+     */
+    public synchronized int size() {
+
+        return cache.size();
+    }
+
+    /*
+     * Queueサイズ。
+     *
+     * デバッグ用。
+     */
+    public synchronized int getQueueSize() {
+
+        return queue.size();
+    }
+
+    /*
+     * Worker終了。
+     */
+    public void shutdown() {
+
+        running = false;
+
+        synchronized (this) {
+            notifyAll();
+        }
+
+        worker.interrupt();
     }
 
     /*
@@ -588,9 +675,15 @@ public class PlayerStatsCache {
                         > config.getMaxCacheSize()
         ) {
 
-            Iterator<Map.Entry<UUID, CachedPlayerStats>>
+            Iterator<
+                    Map.Entry<
+                            UUID,
+                            CachedPlayerStats
+                            >
+                    >
                     iterator =
-                    cache.entrySet().iterator();
+                    cache.entrySet()
+                            .iterator();
 
             if (iterator.hasNext()) {
 
@@ -599,57 +692,5 @@ public class PlayerStatsCache {
                 iterator.remove();
             }
         }
-    }
-
-    /*
-     * UUIDのキャッシュ削除。
-     */
-    public synchronized void remove(
-            UUID uuid
-    ) {
-
-        cache.remove(uuid);
-
-        /*
-         * キューに存在する場合も削除。
-         */
-        Request request =
-                requests.remove(uuid);
-
-        if (request != null) {
-            queue.remove(request);
-        }
-
-        pending.remove(uuid);
-    }
-
-    /*
-     * 全キャッシュ削除。
-     */
-    public synchronized void clear() {
-
-        cache.clear();
-    }
-
-    /*
-     * キャッシュ件数。
-     */
-    public synchronized int size() {
-
-        return cache.size();
-    }
-
-    /*
-     * 終了処理。
-     */
-    public void shutdown() {
-
-        running = false;
-
-        synchronized (this) {
-            notifyAll();
-        }
-
-        worker.interrupt();
     }
 }
