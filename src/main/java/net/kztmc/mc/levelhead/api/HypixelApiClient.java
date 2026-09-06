@@ -188,6 +188,8 @@ public class HypixelApiClient implements ApiClient {
     }
 
     private int getNetworkLevel(double networkExp) {
-        return (int) (networkExp / 10000.0D);
+        if (networkExp < 0.0D) return 1;
+
+        return (int) Math.floor(Math.sqrt(networkExp / 1250.0D + 12.25D) - 3.5D) + 1;
     }
 }
