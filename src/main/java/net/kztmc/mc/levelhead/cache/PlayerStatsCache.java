@@ -293,6 +293,15 @@ public class PlayerStatsCache {
         pending.remove(uuid);
     }
 
+    public synchronized PlayerStats getCached(UUID uuid) {
+
+        CachedPlayerStats cached = cache.get(uuid);
+
+        if (cached == null) return null;
+
+        return cached.getStats();
+    }
+
     public synchronized int size() {
         return cache.size();
     }

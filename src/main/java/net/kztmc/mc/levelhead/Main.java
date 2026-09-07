@@ -3,6 +3,7 @@ package net.kztmc.mc.levelhead;
 import net.kztmc.mc.levelhead.api.ApiClient;
 import net.kztmc.mc.levelhead.api.CustomApiClient;
 import net.kztmc.mc.levelhead.api.HypixelApiClient;
+import net.kztmc.mc.levelhead.api.LocalApiServer;
 import net.kztmc.mc.levelhead.cache.PlayerStatsCache;
 import net.kztmc.mc.levelhead.command.LevelHeadCommand;
 import net.kztmc.mc.levelhead.config.ModConfig;
@@ -41,6 +42,8 @@ public class Main {
 
     private int tabCheckTimer = 0;
 
+    private static LocalApiServer localApiServer;
+
     @Mod.EventHandler
     public void preInit(FMLPreInitializationEvent event) {
         CONFIG = new ModConfig(event.getModConfigurationDirectory());
@@ -49,6 +52,27 @@ public class Main {
         CACHE = new PlayerStatsCache(CONFIG);
 
         rebuildApiClient();
+
+        localApiServer = new LocalApiServer();
+        localApiServer.start();
+
+        Runtime.getRuntime().addShutdownHook(
+                new Thread(
+                        new Runnable() {
+                            @Override
+                            public void run() {
+                                if (localApiServer != null) {
+                                    localApiServer.stop();
+                                }
+
+                                if (CACHE != null) {
+                                    CACHE.shutdown();
+                                }
+                            }
+                        },
+                        "LevelHead-Shutdown"
+                )
+        );
     }
 
     @Mod.EventHandler
