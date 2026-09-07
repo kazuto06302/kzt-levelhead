@@ -21,76 +21,127 @@ public class CustomApiClient implements ApiClient {
     }
 
     @Override
-    public PlayerStats fetchPlayer(UUID uuid) throws Exception {
+    public ApiResponse fetchPlayer(UUID uuid) throws Exception {
 
-        String template = config.getCustomApiUrl();
+        String template =
+                config.getCustomApiUrl();
 
-        if (template == null || template.trim().isEmpty()) {
-            throw new IllegalStateException("Custom API URL is not configured");
+        if (template == null ||
+                template.trim().isEmpty()) {
+
+            throw new IllegalStateException(
+                    "Custom API URL is not configured"
+            );
         }
 
-        String urlString = template.replace("{uuid}", uuid.toString());
-        URL url = new URL(urlString);
-
-        HttpURLConnection connection = (HttpURLConnection) url.openConnection();
-
-        connection.setRequestMethod("GET");
-        connection.setRequestProperty("User-Agent", "LevelHead/1.0");
-        connection.setRequestProperty("Accept", "application/json");
-
-        connection.setConnectTimeout(5000);
-        connection.setReadTimeout(5000);
-
-        int responseCode = connection.getResponseCode();
-
-        if (responseCode < 200 || responseCode >= 300) {
-
-            throw new Exception("HTTP " + responseCode);
-        }
-
-        BufferedReader reader =
-                new BufferedReader(
-                        new InputStreamReader(connection.getInputStream(), StandardCharsets.UTF_8)
+        String urlString =
+                template.replace(
+                        "{uuid}",
+                        uuid.toString()
                 );
 
-        StringBuilder response = new StringBuilder();
+        URL url = new URL(urlString);
 
-        String line;
-        while ((line = reader.readLine()) != null) response.append(line);
+        HttpURLConnection connection =
+                (HttpURLConnection) url.openConnection();
 
-        reader.close();
+        try {
+            connection.setRequestMethod("GET");
+            connection.setRequestProperty(
+                    "User-Agent",
+                    "LevelHead/1.0"
+            );
+            connection.setRequestProperty(
+                    "Accept",
+                    "application/json"
+            );
 
-        connection.disconnect();
+            connection.setConnectTimeout(5000);
+            connection.setReadTimeout(5000);
 
-        return parseResponse(response.toString());
+            int responseCode =
+                    connection.getResponseCode();
+
+            if (responseCode < 200 ||
+                    responseCode >= 300) {
+
+                throw new Exception(
+                        "HTTP " + responseCode
+                );
+            }
+
+            BufferedReader reader =
+                    new BufferedReader(
+                            new InputStreamReader(
+                                    connection.getInputStream(),
+                                    StandardCharsets.UTF_8
+                            )
+                    );
+
+            StringBuilder response =
+                    new StringBuilder();
+
+            String line;
+
+            while ((line = reader.readLine()) != null) {
+                response.append(line);
+            }
+
+            reader.close();
+
+            return new ApiResponse(
+                    parseResponse(response.toString()),
+                    response.toString()
+            );
+
+        } finally {
+            connection.disconnect();
+        }
     }
 
-    private PlayerStats parseResponse(String response) {
+    private PlayerStats parseResponse(
+            String response
+    ) {
 
-        JsonObject root = new JsonParser().parse(response).getAsJsonObject();
+        JsonObject root =
+                new JsonParser()
+                        .parse(response)
+                        .getAsJsonObject();
 
-        if (root.has("success") && !root.get("success").getAsBoolean()) {
+        if (root.has("success") &&
+                !root.get("success").getAsBoolean()) {
+
             return null;
         }
 
         String name = "";
 
         if (root.has("name")) {
-            name = root.get("name").getAsString();
+            name =
+                    root.get("name")
+                            .getAsString();
         }
 
         int hypixelLevel = 0;
 
         if (root.has("hypixelLevel")) {
-            hypixelLevel = root.get("hypixelLevel").getAsInt();
+            hypixelLevel =
+                    root.get("hypixelLevel")
+                            .getAsInt();
         }
 
         int bedwarsLevel = 0;
 
         if (root.has("bedwarsLevel")) {
-            bedwarsLevel = root.get("bedwarsLevel").getAsInt();
+            bedwarsLevel =
+                    root.get("bedwarsLevel")
+                            .getAsInt();
         }
 
-        return new PlayerStats(name, hypixelLevel, bedwarsLevel);
+        return new PlayerStats(
+                name,
+                hypixelLevel,
+                bedwarsLevel
+        );
     }
 }
