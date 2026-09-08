@@ -25,14 +25,13 @@ public class ModConfig {
 
         String hypixelApiKey = "";
 
-        String customApiUrl =
-                "https://example.com/player/{uuid}";
+        String customApiUrl = "https://example.com/player/{uuid}";
 
         long cacheDurationHours = 6;
 
         int maxCacheSize = 10000;
 
-        String levelType = "HYPIXEL";
+        String levelType = "BEDWARS";
 
         int requestInterval = 1000;
     }

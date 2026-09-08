@@ -18,7 +18,7 @@ __取得可能な情報__
 （・UHCレベル ）  
 
 __追加機能__  
-（・SeraphとのAPI競合対策 ）  
+・SeraphとのAPI競合対策  
 （・ランクの同時表示 例: V, V+, M, M+, ++, NI, YT ）  
 （・スターのカラー化 ）  
 （・スターブースター ）  
@@ -26,6 +26,7 @@ __追加機能__
 
 __API__  
 ・Seraphとの競合によりAPI Limitの制限を、  
-　APIのセルフホストとSeraphの機能「Custom API」で実現予定
+　APIのセルフホストとSeraphの機能「Custom API」で実現
+・ポート3015でHypixelAPIの取得結果をそのままポート。
 
 **Dev : Kazut0_@kztmc.net**

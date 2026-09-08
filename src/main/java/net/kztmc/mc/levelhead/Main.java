@@ -124,7 +124,7 @@ public class Main {
         for (NetworkPlayerInfo info : players) {
             if (info == null || info.getGameProfile() == null) continue;
 
-            CACHE.get(info.getGameProfile().getId(), PlayerStatsCache.Priority.NORMAL);
+            CACHE.get(info.getGameProfile().getId(), PlayerStatsCache.Priority.HIGH);
         }
     }
 
