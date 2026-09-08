@@ -18,6 +18,8 @@ import java.util.concurrent.TimeUnit;
 
 public class PlayerStatsCache {
 
+    private static final int API_WORKER_COUNT = 4;
+
     public enum Priority {
 
         HIGH(0),
@@ -74,7 +76,7 @@ public class PlayerStatsCache {
     private final Set<UUID> pending = new HashSet<UUID>();
     private final Map<UUID, Request> requests = new HashMap<UUID, Request>();
     private final PriorityQueue<Request> queue = new PriorityQueue<Request>();
-    private final Thread worker;
+    private final Thread[] workers;
 
     private long worldGeneration = 0L;
     private volatile boolean running = true;
@@ -82,18 +84,24 @@ public class PlayerStatsCache {
 
     public PlayerStatsCache(ModConfig config) {
         this.config = config;
-        worker = new Thread(
-                        new Runnable() {
-                            @Override
-                            public void run() {
-                                processQueue();
-                            }
-                        },
-                        "LevelHead-API-Worker"
-                );
+        this.workers = new Thread[API_WORKER_COUNT];
 
-        worker.setDaemon(true);
-        worker.start();
+        for (int i = 0; i < API_WORKER_COUNT; i++) {
+            final int workerId = i + 1;
+
+            workers[i] = new Thread(
+                    new Runnable() {
+                        @Override
+                        public void run() {
+                            processQueue();
+                        }
+                    },
+                    "LevelHead-API-Worker-" + workerId
+            );
+
+            workers[i].setDaemon(true);
+            workers[i].start();
+        }
     }
 
     public PlayerStats get(UUID uuid) {
@@ -229,11 +237,6 @@ public class PlayerStatsCache {
 
             if (!running) return;
 
-//            // HIGHはrequestIntervalを待たず、次のリクエストへ進む
-//            if (request.priority == Priority.HIGH) {
-//                continue;
-//            }
-
             try {
                 Thread.sleep(Main.CONFIG.getRequestInterval());
             } catch (InterruptedException e) {
@@ -284,7 +287,10 @@ public class PlayerStatsCache {
                 synchronized (this) {
                     if (requestGeneration != worldGeneration) return;
 
-                    rateLimitUntil = System.currentTimeMillis() + 60000L;
+                    rateLimitUntil = Math.max(
+                            rateLimitUntil,
+                            System.currentTimeMillis() + 60000L
+                    );
 
                     if (!pending.contains(request.uuid)) {
 
@@ -381,7 +387,9 @@ public class PlayerStatsCache {
             notifyAll();
         }
 
-        worker.interrupt();
+        for (Thread worker : workers) {
+            worker.interrupt();
+        }
     }
 
     private void trimCache() {
