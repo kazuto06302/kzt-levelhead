@@ -129,6 +129,8 @@ public class HypixelApiClient implements ApiClient {
 
             int hypixelLevel = 0;
             int bedwarsLevel = 0;
+            int skywarsLevel = 0;
+            int uhcLevel = 0;
 
             ModConfig.LevelType levelType =
                     Main.CONFIG.getLevelType();
@@ -161,13 +163,69 @@ public class HypixelApiClient implements ApiClient {
                                     0
                             );
                 }
+
+            } else if (levelType == ModConfig.LevelType.SKYWARS) {
+
+                JsonObject stats =
+                        getObject(
+                                player,
+                                "stats"
+                        );
+
+                JsonObject skywars =
+                        getObject(
+                                stats,
+                                "SkyWars"
+                        );
+
+                if (skywars != null) {
+
+                    double experience =
+                            getDouble(
+                                    skywars,
+                                    "skywars_experience",
+                                    0.0D
+                            );
+
+                    skywarsLevel =
+                            getSkyWarsLevel(experience);
+                }
+
+            } else if (levelType == ModConfig.LevelType.UHC) {
+
+                JsonObject stats =
+                        getObject(
+                                player,
+                                "stats"
+                        );
+
+                JsonObject uhc =
+                        getObject(
+                                stats,
+                                "UHC"
+                        );
+
+                if (uhc != null) {
+
+                    int score =
+                            getInt(
+                                    uhc,
+                                    "score",
+                                    0
+                            );
+
+                    uhcLevel =
+                            getUhcLevel(score);
+                }
             }
 
             PlayerStats stats =
                     new PlayerStats(
                             name,
                             hypixelLevel,
-                            bedwarsLevel
+                            bedwarsLevel,
+                            skywarsLevel,
+                            uhcLevel
                     );
 
             return new ApiResponse(
@@ -316,19 +374,43 @@ public class HypixelApiClient implements ApiClient {
         return element.getAsJsonObject();
     }
 
-    private int getNetworkLevel(
-            double networkExp
-    ) {
+    private int getNetworkLevel(double networkExp) {
+        if (networkExp < 0.0D) return 1;
+        return (int) Math.floor(Math.sqrt(networkExp / 1250.0D + 12.25D) - 3.5D) + 1;
+    }
 
-        if (networkExp < 0.0D) {
-            return 1;
-        }
+    private int getSkyWarsLevel(double experience) {
+        if (experience < 20) return 1;
+        if (experience < 70) return 2;
+        if (experience < 150) return 3;
+        if (experience < 250) return 4;
+        if (experience < 500) return 5;
+        if (experience < 1000) return 6;
+        if (experience < 2000) return 7;
+        if (experience < 3500) return 8;
+        if (experience < 6000) return 9;
+        if (experience < 10000) return 10;
+        if (experience < 15000) return 11;
 
-        return (int) Math.floor(
-                Math.sqrt(
-                        networkExp / 1250.0D +
-                                12.25D
-                ) - 3.5D
-        ) + 1;
+        return 12 + (int) Math.floor((experience - 15000) / 10000.0D);
+    }
+
+    private int getUhcLevel(int score) {
+        if (score < 10) return 1;
+        if (score < 60) return 2;
+        if (score < 210) return 3;
+        if (score < 460) return 4;
+        if (score < 960) return 5;
+        if (score < 1710) return 6;
+        if (score < 2710) return 7;
+        if (score < 5210) return 8;
+        if (score < 10210) return 9;
+        if (score < 13210) return 10;
+        if (score < 16210) return 11;
+        if (score < 19210) return 12;
+        if (score < 22210) return 13;
+        if (score < 25210) return 14;
+
+        return 15;
     }
 }

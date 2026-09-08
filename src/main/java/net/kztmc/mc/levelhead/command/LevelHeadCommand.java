@@ -206,19 +206,21 @@ public class LevelHeadCommand extends CommandBase {
     private void setGame(ICommandSender sender, String[] args) {
 
         if (args.length < 2) {
-            send(sender, "Usage: /levelhead game <hypixel | bedwars>");
+            send(sender, "Usage: /levelhead game <hypixel | bedwars | skywars | uhc>");
             send(sender, "Current: " + Main.CONFIG.getLevelType().name());
             return;
         }
 
         if (args[1].equalsIgnoreCase("hypixel") || args[1].equalsIgnoreCase("network")) {
             Main.CONFIG.setLevelType(ModConfig.LevelType.HYPIXEL);
-
         } else if (args[1].equalsIgnoreCase("bedwars") || args[1].equalsIgnoreCase("bw")) {
             Main.CONFIG.setLevelType(ModConfig.LevelType.BEDWARS);
-
+        } else if (args[1].equalsIgnoreCase("skywars") || args[1].equalsIgnoreCase("sw")) {
+            Main.CONFIG.setLevelType(ModConfig.LevelType.SKYWARS);
+        } else if (args[1].equalsIgnoreCase("uhc")) {
+            Main.CONFIG.setLevelType(ModConfig.LevelType.UHC);
         } else {
-            send(sender, "Mode must be hypixel or bedwars");
+            send(sender, "Mode must be hypixel, bedwars, skywars, uhc");
             return;
         }
 

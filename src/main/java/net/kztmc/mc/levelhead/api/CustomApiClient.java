@@ -99,49 +99,28 @@ public class CustomApiClient implements ApiClient {
         }
     }
 
-    private PlayerStats parseResponse(
-            String response
-    ) {
-
-        JsonObject root =
-                new JsonParser()
-                        .parse(response)
-                        .getAsJsonObject();
-
-        if (root.has("success") &&
-                !root.get("success").getAsBoolean()) {
-
-            return null;
-        }
+    private PlayerStats parseResponse(String response) {
+        JsonObject root = new JsonParser().parse(response).getAsJsonObject();
+        if (root.has("success") && !root.get("success").getAsBoolean()) return null;
 
         String name = "";
-
-        if (root.has("name")) {
-            name =
-                    root.get("name")
-                            .getAsString();
-        }
-
         int hypixelLevel = 0;
-
-        if (root.has("hypixelLevel")) {
-            hypixelLevel =
-                    root.get("hypixelLevel")
-                            .getAsInt();
-        }
-
         int bedwarsLevel = 0;
+        int skywarsLevel = 0;
+        int uhcLevel = 0;
 
-        if (root.has("bedwarsLevel")) {
-            bedwarsLevel =
-                    root.get("bedwarsLevel")
-                            .getAsInt();
-        }
+        if (root.has("name")) name = root.get("name").getAsString();
+        if (root.has("hypixelLevel")) hypixelLevel = root.get("hypixelLevel").getAsInt();
+        if (root.has("bedwarsLevel")) bedwarsLevel = root.get("bedwarsLevel").getAsInt();
+        if (root.has("skywarsLevel")) skywarsLevel = root.get("skywarsLevel").getAsInt();
+        if (root.has("uhcLevel")) uhcLevel = root.get("uhcLevel").getAsInt();
 
         return new PlayerStats(
                 name,
                 hypixelLevel,
-                bedwarsLevel
+                bedwarsLevel,
+                skywarsLevel,
+                uhcLevel
         );
     }
 }

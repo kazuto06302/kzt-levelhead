@@ -16,7 +16,9 @@ public class ModConfig {
 
     public enum LevelType {
         HYPIXEL,
-        BEDWARS
+        BEDWARS,
+        SKYWARS,
+        UHC
     }
 
     private static class Data {

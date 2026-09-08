@@ -8,10 +8,22 @@ public class PlayerStats {
 
     private final int bedwarsLevel;
 
-    public PlayerStats(String name, int hypixelLevel, int bedwarsLevel) {
+    private final int skywarsLevel;
+
+    private final int uhcLevel;
+
+    public PlayerStats(
+            String name,
+            int hypixelLevel,
+            int bedwarsLevel,
+            int skywarsLevel,
+            int uhcLevel
+    ) {
         this.name = name;
         this.hypixelLevel = hypixelLevel;
         this.bedwarsLevel = bedwarsLevel;
+        this.skywarsLevel = skywarsLevel;
+        this.uhcLevel = uhcLevel;
     }
 
     public String getName() {
@@ -24,5 +36,13 @@ public class PlayerStats {
 
     public int getBedwarsLevel() {
         return bedwarsLevel;
+    }
+
+    public int getSkywarsLevel() {
+        return skywarsLevel;
+    }
+
+    public int getUhcLevel() {
+        return uhcLevel;
     }
 }
