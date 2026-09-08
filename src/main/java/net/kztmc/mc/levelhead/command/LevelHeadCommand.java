@@ -230,7 +230,7 @@ public class LevelHeadCommand extends CommandBase {
         send(sender, "Game mode changed to " + Main.CONFIG.getLevelType().name());
     }
 
-    private void send(ICommandSender sender, String message) {
+    public static void send(ICommandSender sender, String message) {
 
         sender.addChatMessage(
                 new ChatComponentText(

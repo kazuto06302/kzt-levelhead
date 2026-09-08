@@ -5,7 +5,9 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import net.kztmc.mc.levelhead.Main;
 import net.kztmc.mc.levelhead.cache.PlayerStats;
+import net.kztmc.mc.levelhead.command.LevelHeadCommand;
 import net.kztmc.mc.levelhead.config.ModConfig;
+import net.minecraft.client.Minecraft;
 
 import java.io.BufferedReader;
 import java.io.InputStream;
@@ -46,6 +48,18 @@ public class HypixelApiClient implements ApiClient {
 
             if (statusCode == 429) {
                 String body = readErrorStream(connection);
+
+                LevelHeadCommand.send(Minecraft.getMinecraft().thePlayer,
+                        "§6[I] HTTP " + statusCode +
+                                " | Remaining: " +
+                                connection.getHeaderField("RateLimit-Remaining") +
+                                " | Reset: " +
+                                connection.getHeaderField("RateLimit-Reset")
+                );
+
+                LevelHeadCommand.send(Minecraft.getMinecraft().thePlayer,
+                        "§6[L] LevelHead API UUID: " + uuid
+                );
 
                 throw new HypixelApiException(
                         429,
