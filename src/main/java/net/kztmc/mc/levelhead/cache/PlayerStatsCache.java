@@ -229,10 +229,10 @@ public class PlayerStatsCache {
 
             if (!running) return;
 
-            // HIGHはrequestIntervalを待たず、次のリクエストへ進む
-            if (request.priority == Priority.HIGH) {
-                continue;
-            }
+//            // HIGHはrequestIntervalを待たず、次のリクエストへ進む
+//            if (request.priority == Priority.HIGH) {
+//                continue;
+//            }
 
             try {
                 Thread.sleep(Main.CONFIG.getRequestInterval());
