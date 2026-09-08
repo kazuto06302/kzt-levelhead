@@ -49,17 +49,32 @@ public class HypixelApiClient implements ApiClient {
             if (statusCode == 429) {
                 String body = readErrorStream(connection);
 
-                LevelHeadCommand.send(Minecraft.getMinecraft().thePlayer,
+                final String info =
                         "§6[I] HTTP " + statusCode +
                                 " | Remaining: " +
                                 connection.getHeaderField("RateLimit-Remaining") +
                                 " | Reset: " +
-                                connection.getHeaderField("RateLimit-Reset")
-                );
+                                connection.getHeaderField("RateLimit-Reset");
 
-                LevelHeadCommand.send(Minecraft.getMinecraft().thePlayer,
-                        "§6[L] LevelHead API UUID: " + uuid
-                );
+                final String requestUuid =
+                        "§6[L] LevelHead API UUID: " + uuid;
+
+                Minecraft.getMinecraft().addScheduledTask(new Runnable() {
+                    @Override
+                    public void run() {
+                        if (Minecraft.getMinecraft().thePlayer != null) {
+                            LevelHeadCommand.send(
+                                    Minecraft.getMinecraft().thePlayer,
+                                    info
+                            );
+
+                            LevelHeadCommand.send(
+                                    Minecraft.getMinecraft().thePlayer,
+                                    requestUuid
+                            );
+                        }
+                    }
+                });
 
                 throw new HypixelApiException(
                         429,
