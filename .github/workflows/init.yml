@@ -22,7 +22,7 @@ jobs:
           pack_name="com.github.${owner,,}.${name,,}"
           proj_name="$(echo $GITHUB_REPOSITORY | cut -d/ -f2)"
           modid="$(echo $name | sed 's/[^a-z]//g')"
-          ./make-my-own.sh "$pack_name" "$proj_name" "$modid"
+          bash ./make-my-own.sh "$pack_name" "$proj_name" "$modid"
           git add .
           git commit -F- <<EOF
           Initialize template repository proper
