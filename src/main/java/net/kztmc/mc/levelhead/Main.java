@@ -160,6 +160,8 @@ public class Main {
 
         Collections.reverse(scores);
 
+        List<String> lines = new ArrayList<>();
+
         for (Score score : scores) {
             if (score.getPlayerName().startsWith("#")) {
                 continue;
@@ -170,11 +172,23 @@ public class Main {
                     score.getPlayerName()
             );
 
-            if (line.length() < 10) return false;
-
-            return line.charAt(9) == 'm';
+            lines.add(line);
         }
 
-        return false;
+        if (lines.isEmpty()) return false;
+
+        // 1行目の10文字目が「m」
+        String firstLine = lines.get(0);
+        if (firstLine.length() < 10 || firstLine.charAt(9) != 'm') {
+            return false;
+        }
+
+        // 最後の行が「§ewww.hypixel.net」
+        String lastLine = lines.get(lines.size() - 1);
+        if (!"§ewww.hypixel.net".equals(lastLine)) {
+            return false;
+        }
+
+        return true;
     }
 }
