@@ -91,7 +91,10 @@ public class CustomApiClient implements ApiClient {
 
             return new ApiResponse(
                     parseResponse(response.toString()),
-                    response.toString()
+                    response.toString(),
+                    -1,
+                    -1,
+                    -1
             );
 
         } finally {
