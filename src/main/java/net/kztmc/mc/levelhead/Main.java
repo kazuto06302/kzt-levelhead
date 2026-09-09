@@ -10,6 +10,10 @@ import net.kztmc.mc.levelhead.config.ModConfig;
 import net.kztmc.mc.levelhead.render.PlayerLevelRenderer;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.network.NetworkPlayerInfo;
+import net.minecraft.scoreboard.Score;
+import net.minecraft.scoreboard.ScoreObjective;
+import net.minecraft.scoreboard.ScorePlayerTeam;
+import net.minecraft.scoreboard.Scoreboard;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.world.WorldEvent;
 import net.minecraftforge.fml.common.Mod;
@@ -19,7 +23,10 @@ import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
 import net.minecraftforge.fml.common.gameevent.PlayerEvent;
 import net.minecraftforge.fml.common.gameevent.TickEvent;
 
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
+import java.util.List;
 
 @Mod(
         modid = Main.MOD_ID,
@@ -96,14 +103,6 @@ public class Main {
         return apiClient;
     }
 
-    /**
-     * クライアントTick
-     *
-     * 1秒ごとにTABの人数を確認する。
-     *
-     * TABが24人未満なら、TABにいる全員を
-     * NORMAL優先度で取得キューに追加する。
-     */
     @SubscribeEvent
     public void onClientTick(TickEvent.ClientTickEvent event) {
 
@@ -120,6 +119,7 @@ public class Main {
         int playerCount = players.size();
 
         if (playerCount >= 24) return;
+        if (!isQueueAssignmentAllowed()) return;
 
         for (NetworkPlayerInfo info : players) {
             if (info == null || info.getGameProfile() == null) continue;
@@ -143,5 +143,38 @@ public class Main {
         }
 
         tabCheckTimer = 0;
+    }
+
+    private boolean isQueueAssignmentAllowed() {
+        if (mc.theWorld == null) return false;
+
+        Scoreboard scoreboard = mc.theWorld.getScoreboard();
+        if (scoreboard == null) return false;
+
+        ScoreObjective objective = scoreboard.getObjectiveInDisplaySlot(1);
+        if (objective == null) return false;
+
+        List<Score> scores = new ArrayList<>(
+                scoreboard.getSortedScores(objective)
+        );
+
+        Collections.reverse(scores);
+
+        for (Score score : scores) {
+            if (score.getPlayerName().startsWith("#")) {
+                continue;
+            }
+
+            String line = ScorePlayerTeam.formatPlayerName(
+                    scoreboard.getPlayersTeam(score.getPlayerName()),
+                    score.getPlayerName()
+            );
+
+            if (line.length() < 10) return false;
+
+            return line.charAt(9) == 'm';
+        }
+
+        return false;
     }
 }

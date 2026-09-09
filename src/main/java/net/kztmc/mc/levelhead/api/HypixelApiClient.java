@@ -49,18 +49,6 @@ public class HypixelApiClient implements ApiClient {
             if (statusCode == 429) {
                 String body = readErrorStream(connection);
 
-                LevelHeadCommand.send(Minecraft.getMinecraft().thePlayer,
-                        "§6[I] HTTP " + statusCode +
-                                " | Remaining: " +
-                                connection.getHeaderField("RateLimit-Remaining") +
-                                " | Reset: " +
-                                connection.getHeaderField("RateLimit-Reset")
-                );
-
-                LevelHeadCommand.send(Minecraft.getMinecraft().thePlayer,
-                        "§6[L] LevelHead API UUID: " + uuid
-                );
-
                 throw new HypixelApiException(
                         429,
                         "Hypixel API rate limited" +
