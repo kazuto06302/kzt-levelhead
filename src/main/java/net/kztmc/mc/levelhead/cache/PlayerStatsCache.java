@@ -82,6 +82,9 @@ public class PlayerStatsCache {
     private volatile boolean running = true;
     private long rateLimitUntil = 0L;
     private long nextRequestAt = 0L;
+    private int rateLimitRemaining = -1;
+    private int rateLimitLimit = -1;
+    private long rateLimitReset = -1L;
     private final Set<UUID> inFlight = new HashSet<UUID>();
 
     public PlayerStatsCache(ModConfig config) {

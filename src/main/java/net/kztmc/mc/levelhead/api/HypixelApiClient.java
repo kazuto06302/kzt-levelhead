@@ -46,6 +46,10 @@ public class HypixelApiClient implements ApiClient {
 
             int statusCode = connection.getResponseCode();
 
+            int rateLimitLimit = connection.getHeaderFieldInt("RateLimit-Limit", -1);
+            int rateLimitRemaining = connection.getHeaderFieldInt("RateLimit-Remaining", -1);
+            long rateLimitReset = connection.getHeaderFieldLong("RateLimit-Reset", -1L);
+
             if (statusCode == 429) {
                 String body = readErrorStream(connection);
 
@@ -120,7 +124,13 @@ public class HypixelApiClient implements ApiClient {
             if (playerElement == null ||
                     playerElement.isJsonNull()) {
 
-                return new ApiResponse(null, response);
+                return new ApiResponse(
+                        null,
+                        response,
+                        rateLimitLimit,
+                        rateLimitRemaining,
+                        rateLimitReset
+                );
             }
 
             JsonObject player =
@@ -232,7 +242,10 @@ public class HypixelApiClient implements ApiClient {
 
             return new ApiResponse(
                     stats,
-                    response
+                    response,
+                    rateLimitLimit,
+                    rateLimitRemaining,
+                    rateLimitReset
             );
 
         } finally {

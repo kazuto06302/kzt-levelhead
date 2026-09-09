@@ -13,12 +13,22 @@ public interface ApiClient {
         private final PlayerStats stats;
         private final String rawJson;
 
+        private final int rateLimitLimit;
+        private final int rateLimitRemaining;
+        private final long rateLimitReset;
+
         public ApiResponse(
                 PlayerStats stats,
-                String rawJson
+                String rawJson,
+                int rateLimitLimit,
+                int rateLimitRemaining,
+                long rateLimitReset
         ) {
             this.stats = stats;
             this.rawJson = rawJson;
+            this.rateLimitLimit = rateLimitLimit;
+            this.rateLimitRemaining = rateLimitRemaining;
+            this.rateLimitReset = rateLimitReset;
         }
 
         public PlayerStats getStats() {
@@ -27,6 +37,18 @@ public interface ApiClient {
 
         public String getRawJson() {
             return rawJson;
+        }
+
+        public int getRateLimitLimit() {
+            return rateLimitLimit;
+        }
+
+        public int getRateLimitRemaining() {
+            return rateLimitRemaining;
+        }
+
+        public long getRateLimitReset() {
+            return rateLimitReset;
         }
     }
 }
