@@ -74,6 +74,7 @@ public class PlayerStatsCache {
             new LinkedHashMap<UUID, CachedPlayerData>(128, 0.75f, true);
 
     private final Set<UUID> pending = new HashSet<UUID>();
+    private final Set<UUID> inFlight = new HashSet<UUID>();
     private final Map<UUID, Request> requests = new HashMap<UUID, Request>();
     private final PriorityQueue<Request> queue = new PriorityQueue<Request>();
     private final Thread[] workers;
@@ -81,6 +82,7 @@ public class PlayerStatsCache {
     private long worldGeneration = 0L;
     private volatile boolean running = true;
     private long rateLimitUntil = 0L;
+    private long nextRequestAt = 0L;
 
     public PlayerStatsCache(ModConfig config) {
         this.config = config;
@@ -149,16 +151,16 @@ public class PlayerStatsCache {
         final CountDownLatch latch = new CountDownLatch(1);
 
         Callback callback = new Callback() {
-                    @Override
-                    public void onSuccess(UUID uuid, PlayerStats stats) {
-                        latch.countDown();
-                    }
+            @Override
+            public void onSuccess(UUID uuid, PlayerStats stats) {
+                latch.countDown();
+            }
 
-                    @Override
-                    public void onFailure(UUID uuid, Exception exception) {
-                        latch.countDown();
-                    }
-                };
+            @Override
+            public void onFailure(UUID uuid, Exception exception) {
+                latch.countDown();
+            }
+        };
 
         enqueue(uuid, priority, callback);
 
@@ -174,7 +176,7 @@ public class PlayerStatsCache {
     }
 
     private synchronized void enqueue(UUID uuid, Priority priority, Callback callback) {
-        if (pending.contains(uuid)) {
+        if (pending.contains(uuid) || inFlight.contains(uuid)) {
             Request current = requests.get(uuid);
 
             if (current == null) return;
@@ -183,7 +185,7 @@ public class PlayerStatsCache {
                 current.callbacks.add(callback);
             }
 
-            if (priority.value < current.priority.value) {
+            if (priority.value < current.priority.value && pending.contains(uuid)) {
                 queue.remove(current);
                 current.priority = priority;
                 queue.offer(current);
@@ -220,32 +222,53 @@ public class PlayerStatsCache {
                 if (request == null) continue;
 
                 pending.remove(request.uuid);
-                requests.remove(request.uuid);
+                inFlight.add(request.uuid);
             }
 
-            long remaining = rateLimitUntil - System.currentTimeMillis();
-
-            if (remaining > 0L) {
-                try {
-                    Thread.sleep(remaining);
-                } catch (InterruptedException e) {
-                    if (!running) return;
-                }
-            }
-
-            executeRequest(request);
-
-            if (!running) return;
+            boolean retry = false;
 
             try {
-                Thread.sleep(Main.CONFIG.getRequestInterval());
-            } catch (InterruptedException e) {
+                awaitRequestPermit();
+
                 if (!running) return;
+
+                retry = executeRequest(request);
+            } finally {
+                if (!retry) {
+                    synchronized (this) {
+                        if (requests.get(request.uuid) == request) {
+                            requests.remove(request.uuid);
+                            inFlight.remove(request.uuid);
+                        }
+                    }
+                }
             }
         }
     }
 
-    private void executeRequest(Request request) {
+    private void awaitRequestPermit() {
+        synchronized (this) {
+            while (running) {
+                long now = System.currentTimeMillis();
+                long rateLimitRemaining = rateLimitUntil - now;
+                long intervalRemaining = nextRequestAt - now;
+                long waitTime = Math.max(rateLimitRemaining, intervalRemaining);
+
+                if (waitTime <= 0L) {
+                    nextRequestAt = now + Main.CONFIG.getRequestInterval();
+                    return;
+                }
+
+                try {
+                    wait(waitTime);
+                } catch (InterruptedException e) {
+                    if (!running) return;
+                }
+            }
+        }
+    }
+
+    private boolean executeRequest(Request request) {
         final long requestGeneration;
 
         synchronized (this) {
@@ -255,13 +278,13 @@ public class PlayerStatsCache {
         try {
             ApiClient apiClient = Main.getApiClient();
 
-            if (apiClient == null) return;
+            if (apiClient == null) return false;
 
             ApiClient.ApiResponse response = apiClient.fetchPlayer(request.uuid);
 
             synchronized (this) {
-                if (requestGeneration != worldGeneration) return;
-                if (response == null || response.getStats() == null) return;
+                if (requestGeneration != worldGeneration) return false;
+                if (response == null || response.getStats() == null) return false;
 
                 cache.put(
                         request.uuid,
@@ -274,9 +297,16 @@ public class PlayerStatsCache {
                 trimCache();
             }
 
-            for (Callback callback : request.callbacks) {
+            Set<Callback> callbacks;
+            synchronized (this) {
+                callbacks = new HashSet<Callback>(request.callbacks);
+            }
+
+            for (Callback callback : callbacks) {
                 callback.onSuccess(request.uuid, response.getStats());
             }
+
+            return false;
 
         } catch (Exception e) {
 
@@ -285,41 +315,40 @@ public class PlayerStatsCache {
                 System.err.println("[LevelHead] Hypixel API rate limited. Pausing requests for 60 seconds.");
 
                 synchronized (this) {
-                    if (requestGeneration != worldGeneration) return;
+                    if (requestGeneration != worldGeneration) return false;
 
                     rateLimitUntil = Math.max(
                             rateLimitUntil,
                             System.currentTimeMillis() + 60000L
                     );
 
+                    inFlight.remove(request.uuid);
+
                     if (!pending.contains(request.uuid)) {
-
-                        Request retry =
-                                new Request(
-                                        request.uuid,
-                                        request.priority,
-                                        null
-                                );
-
-                        retry.callbacks.addAll(request.callbacks);
                         pending.add(request.uuid);
-                        requests.put(request.uuid, retry);
-                        queue.offer(retry);
-
-                        notifyAll();
+                        requests.put(request.uuid, request);
+                        queue.offer(request);
                     }
+
+                    notifyAll();
                 }
-                return;
+
+                return true;
             }
 
             System.err.println("[LevelHead] Failed to fetch " + request.uuid);
-
             e.printStackTrace();
 
-            for (Callback callback : request.callbacks) {
+            Set<Callback> callbacks;
+            synchronized (this) {
+                callbacks = new HashSet<Callback>(request.callbacks);
+            }
 
+            for (Callback callback : callbacks) {
                 callback.onFailure(request.uuid, e);
             }
+
+            return false;
         }
     }
 
@@ -330,8 +359,10 @@ public class PlayerStatsCache {
         queue.clear();
         pending.clear();
         requests.clear();
+        inFlight.clear();
 
         rateLimitUntil = 0L;
+        nextRequestAt = 0L;
 
         notifyAll();
     }
@@ -343,10 +374,12 @@ public class PlayerStatsCache {
         queue.clear();
         pending.clear();
         requests.clear();
+        inFlight.clear();
 
         worldGeneration++;
 
         rateLimitUntil = 0L;
+        nextRequestAt = 0L;
 
         notifyAll();
     }
@@ -360,6 +393,7 @@ public class PlayerStatsCache {
         }
 
         pending.remove(uuid);
+        inFlight.remove(uuid);
     }
 
     public synchronized PlayerStats getCached(UUID uuid) {
