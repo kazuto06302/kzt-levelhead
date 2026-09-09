@@ -20,6 +20,32 @@ public class PlayerStatsCache {
 
     private static final int API_WORKER_COUNT = 4;
 
+    /*
+     * RateLimit-Remainingがこの値以下になったら
+     * 通常の高速モードから安全側へ移行する。
+     */
+    private static final int LOW_RATE_LIMIT_REMAINING = 20;
+
+    /*
+     * RateLimitの残量が少ないときの最低リクエスト間隔。
+     */
+    private static final long LOW_RATE_LIMIT_INTERVAL = 250L;
+
+    /*
+     * RateLimit情報が取得できなかった場合の
+     * フォールバック間隔。
+     */
+    private static final long FALLBACK_REQUEST_INTERVAL = 1000L;
+
+    /*
+     * 429を受け取った場合の安全な待機時間。
+     *
+     * 現在のHypixelApiExceptionにはRateLimit-Resetを
+     * 保持する仕組みがないため、ここでは60秒待つ。
+     */
+    private static final long RATE_LIMIT_COOLDOWN = 60000L;
+
+
     public enum Priority {
 
         HIGH(0),
@@ -33,17 +59,21 @@ public class PlayerStatsCache {
         }
     }
 
+
     public interface Callback {
         void onSuccess(UUID uuid, PlayerStats stats);
         void onFailure(UUID uuid, Exception exception);
     }
+
 
     private static class Request implements Comparable<Request> {
 
         private final UUID uuid;
         private Priority priority;
         private final Set<Callback> callbacks = new HashSet<Callback>();
+
         private final long createdAt;
+
 
         Request(UUID uuid, Priority priority, Callback callback) {
             this.uuid = uuid;
@@ -56,8 +86,10 @@ public class PlayerStatsCache {
             this.createdAt = System.nanoTime();
         }
 
+
         @Override
         public int compareTo(Request other) {
+
             int priorityCompare = Integer.compare(priority.value, other.priority.value);
 
             if (priorityCompare != 0) {
@@ -68,60 +100,96 @@ public class PlayerStatsCache {
         }
     }
 
+
     private final ModConfig config;
 
+
     private final Map<UUID, CachedPlayerData> cache =
-            new LinkedHashMap<UUID, CachedPlayerData>(128, 0.75f, true);
+            new LinkedHashMap<UUID, CachedPlayerData>(
+                    128,
+                    0.75f,
+                    true
+            );
+
 
     private final Set<UUID> pending = new HashSet<UUID>();
     private final Map<UUID, Request> requests = new HashMap<UUID, Request>();
     private final PriorityQueue<Request> queue = new PriorityQueue<Request>();
+
     private final Thread[] workers;
 
+
     private long worldGeneration = 0L;
+
     private volatile boolean running = true;
+
+
+    /*
+     * RateLimit制御
+     */
     private long rateLimitUntil = 0L;
     private long nextRequestAt = 0L;
     private int rateLimitRemaining = -1;
     private int rateLimitLimit = -1;
     private long rateLimitReset = -1L;
+
+
+    /*
+     * 現在APIリクエストを実行しているUUID。
+     */
     private final Set<UUID> inFlight = new HashSet<UUID>();
 
+
     public PlayerStatsCache(ModConfig config) {
+
         this.config = config;
         this.workers = new Thread[API_WORKER_COUNT];
+
 
         for (int i = 0; i < API_WORKER_COUNT; i++) {
             final int workerId = i + 1;
 
             workers[i] = new Thread(
-                    new Runnable() {
-                        @Override
-                        public void run() {
-                            processQueue();
-                        }
-                    },
-                    "LevelHead-API-Worker-" + workerId
-            );
+                            new Runnable() {
 
+                                @Override
+                                public void run() {
+                                    processQueue();
+                                }
+                            },
+
+                            "LevelHead-API-Worker-" + workerId
+                    );
+
+
+            /*
+             * Minecraft終了時にWorkerが
+             * JVM終了を妨げないようにする。
+             */
             workers[i].setDaemon(true);
             workers[i].start();
         }
     }
 
+
     public PlayerStats get(UUID uuid) {
         return get(uuid, Priority.NORMAL);
     }
 
+
     public synchronized PlayerStats get(UUID uuid, Priority priority) {
+
         CachedPlayerData cached = cache.get(uuid);
+
 
         if (cached == null) {
             enqueue(uuid, priority, null);
             return null;
         }
 
+
         long age = System.currentTimeMillis() - cached.getFetchedAt();
+
 
         if (age > config.getCacheDurationMillis()) {
             enqueue(uuid, priority, null);
@@ -130,14 +198,17 @@ public class PlayerStatsCache {
         return cached.getStats();
     }
 
+
     public synchronized CachedPlayerData getCachedData(UUID uuid) {
         return cache.get(uuid);
     }
+
 
     public CachedPlayerData getOrWait(final UUID uuid, Priority priority, long timeoutMillis) {
         CachedPlayerData cached;
 
         synchronized (this) {
+
             cached = cache.get(uuid);
 
             if (cached != null) {
@@ -147,17 +218,23 @@ public class PlayerStatsCache {
                     enqueue(uuid, priority, null);
                 }
 
+
                 return cached;
             }
         }
 
+
         final CountDownLatch latch = new CountDownLatch(1);
 
-        Callback callback = new Callback() {
+
+        Callback callback =
+                new Callback() {
+
                     @Override
                     public void onSuccess(UUID uuid, PlayerStats stats) {
                         latch.countDown();
                     }
+
 
                     @Override
                     public void onFailure(UUID uuid, Exception exception) {
@@ -165,7 +242,9 @@ public class PlayerStatsCache {
                     }
                 };
 
+
         enqueue(uuid, priority, callback);
+
 
         try {
             latch.await(timeoutMillis, TimeUnit.MILLISECONDS);
@@ -173,20 +252,25 @@ public class PlayerStatsCache {
             Thread.currentThread().interrupt();
         }
 
+
         synchronized (this) {
             return cache.get(uuid);
         }
     }
 
+
     private synchronized void enqueue(UUID uuid, Priority priority, Callback callback) {
+
         if (pending.contains(uuid)) {
             Request current = requests.get(uuid);
+
 
             if (current == null) return;
 
             if (callback != null) {
                 current.callbacks.add(callback);
             }
+
 
             if (priority.value < current.priority.value) {
                 queue.remove(current);
@@ -197,6 +281,7 @@ public class PlayerStatsCache {
             return;
         }
 
+
         Request request = new Request(uuid, priority, callback);
 
         pending.add(uuid);
@@ -206,43 +291,46 @@ public class PlayerStatsCache {
         notifyAll();
     }
 
+
     private void processQueue() {
+
         while (running) {
             Request request;
 
             synchronized (this) {
+
                 while (running && queue.isEmpty()) {
                     try {
                         wait();
                     } catch (InterruptedException e) {
-                        if (!running) {
-                            return;
-                        }
+                        if (!running) return;
                     }
                 }
 
-                if (!running) {
-                    return;
-                }
-
+                if (!running) return;
                 request = queue.poll();
-
-                if (request == null) {
-                    continue;
-                }
+                if (request == null) continue;
 
                 pending.remove(request.uuid);
                 inFlight.add(request.uuid);
             }
 
+            /*
+             * APIのRateLimitを確認。
+             *
+             * 4 Worker全員がここを通るため、
+             * RateLimit制御はWorker間で共有される。
+             */
             awaitRequestPermit();
 
             if (!running) {
                 synchronized (this) {
+
                     if (requests.get(request.uuid) == request) {
                         inFlight.remove(request.uuid);
                     }
                 }
+
                 return;
             }
 
@@ -250,12 +338,14 @@ public class PlayerStatsCache {
         }
     }
 
+
     private void executeRequest(Request request) {
         final long requestGeneration;
 
         synchronized (this) {
             requestGeneration = worldGeneration;
         }
+
 
         try {
             ApiClient apiClient = Main.getApiClient();
@@ -267,35 +357,57 @@ public class PlayerStatsCache {
                         inFlight.remove(request.uuid);
                     }
                 }
+
                 return;
             }
+
 
             ApiClient.ApiResponse response = apiClient.fetchPlayer(request.uuid);
 
             synchronized (this) {
+
+                /*
+                 * ワールド移動などによって
+                 * 古いRequestになった場合は破棄。
+                 */
                 if (requestGeneration != worldGeneration) {
                     if (requests.get(request.uuid) == request) {
                         requests.remove(request.uuid);
                         inFlight.remove(request.uuid);
                     }
+
                     return;
                 }
+
 
                 if (response == null || response.getStats() == null) {
                     if (requests.get(request.uuid) == request) {
                         requests.remove(request.uuid);
                         inFlight.remove(request.uuid);
                     }
+
                     return;
                 }
 
-                cache.put(
-                        request.uuid,
+
+                /*
+                 * ==========================================
+                 * RateLimit情報更新
+                 * ==========================================
+                 */
+
+                updateRateLimit(response);
+
+                /*
+                 * キャッシュへ保存。
+                 */
+                cache.put(request.uuid,
                         new CachedPlayerData(
                                 response.getStats(),
                                 response.getRawJson()
                         )
                 );
+
 
                 trimCache();
 
@@ -305,18 +417,20 @@ public class PlayerStatsCache {
                 }
             }
 
+
             /*
-             * callbacks をコピーしてから実行する。
-             * 他のスレッドから callbacks が変更されても
-             * ConcurrentModificationException にならないようにする。
+             * callbacksをコピーしてから実行。
              */
             Set<Callback> callbacks;
+
 
             synchronized (this) {
                 callbacks = new HashSet<Callback>(request.callbacks);
             }
 
+
             for (Callback callback : callbacks) {
+
                 try {
                     callback.onSuccess(request.uuid, response.getStats());
                 } catch (Exception e) {
@@ -326,41 +440,45 @@ public class PlayerStatsCache {
 
         } catch (Exception e) {
 
-            if (e instanceof HypixelApiException
-                    && ((HypixelApiException) e).isRateLimited()) {
 
-                System.err.println(
-                        "[LevelHead] Hypixel API rate limited. Pausing requests for 60 seconds."
-                );
+            /*
+             * ==========================================
+             * HTTP 429
+             * ==========================================
+             */
+
+            if (e instanceof HypixelApiException && ((HypixelApiException) e).isRateLimited()) {
+
+                System.err.println("[LevelHead] Hypixel API rate limited. Pausing requests for 60 seconds.");
+
 
                 synchronized (this) {
+
                     if (requestGeneration != worldGeneration) {
                         if (requests.get(request.uuid) == request) {
                             requests.remove(request.uuid);
                             inFlight.remove(request.uuid);
                         }
+
                         return;
                     }
 
-                    rateLimitUntil = Math.max(
-                            rateLimitUntil,
-                            System.currentTimeMillis() + 60000L
-                    );
 
                     /*
-                     * 現在のRequestをそのまま再利用する。
-                     * 新しいRequestを作ると、同じUUIDについて
-                     * requests / inFlight の管理が複雑になる。
+                     * 全Workerを一時停止。
+                     */
+                    rateLimitUntil = Math.max(rateLimitUntil,
+                            System.currentTimeMillis() + RATE_LIMIT_COOLDOWN);
+
+
+                    /*
+                     * このRequestを再キュー。
                      */
                     inFlight.remove(request.uuid);
 
-                    if (!pending.contains(request.uuid)
-                            && requests.get(request.uuid) == request) {
-
+                    if (!pending.contains(request.uuid) && requests.get(request.uuid) == request) {
                         pending.add(request.uuid);
                         queue.offer(request);
-
-                        notifyAll();
                     }
 
                     notifyAll();
@@ -369,16 +487,20 @@ public class PlayerStatsCache {
                 return;
             }
 
+
+            /*
+             * 通常のエラー。
+             */
             synchronized (this) {
+
                 if (requests.get(request.uuid) == request) {
                     requests.remove(request.uuid);
                     inFlight.remove(request.uuid);
                 }
             }
 
-            System.err.println(
-                    "[LevelHead] Failed to fetch " + request.uuid
-            );
+
+            System.err.println("[LevelHead] Failed to fetch" + request.uuid);
 
             e.printStackTrace();
 
@@ -388,7 +510,9 @@ public class PlayerStatsCache {
                 callbacks = new HashSet<Callback>(request.callbacks);
             }
 
+
             for (Callback callback : callbacks) {
+
                 try {
                     callback.onFailure(request.uuid, e);
                 } catch (Exception callbackException) {
@@ -398,8 +522,178 @@ public class PlayerStatsCache {
         }
     }
 
-    public synchronized void resetQueue() {
 
+    /*
+     * ==========================================
+     * RateLimit情報更新
+     * ==========================================
+     */
+    private synchronized void updateRateLimit(ApiClient.ApiResponse response) {
+
+        int limit = response.getRateLimitLimit();
+        int remaining = response.getRateLimitRemaining();
+        long reset = response.getRateLimitReset();
+
+
+        if (limit >= 0) rateLimitLimit = limit;
+
+        if (remaining >= 0) rateLimitRemaining = remaining;
+
+        if (reset >= 0) rateLimitReset = reset;
+
+
+        /*
+         * Remainingが0なら、
+         * Resetまで待機する。
+         */
+        if (rateLimitRemaining == 0 && rateLimitReset > 0) {
+
+            /*
+             * HypixelのRateLimit-Resetは
+             * 「次のリセットまでの秒数」。
+             */
+            long resetMillis = rateLimitReset * 1000L;
+
+
+            rateLimitUntil =
+                    Math.max(
+                            rateLimitUntil,
+                            System.currentTimeMillis() + resetMillis
+                    );
+        }
+    }
+
+
+    /*
+     * ==========================================
+     * Request許可待ち
+     * ==========================================
+     */
+    private void awaitRequestPermit() {
+
+        synchronized (this) {
+
+            while (running) {
+
+                long now = System.currentTimeMillis();
+
+                /*
+                 * RateLimitによる停止。
+                 */
+                long rateLimitRemainingTime = rateLimitUntil - now;
+
+                /*
+                 * 通常のRequest間隔。
+                 */
+                long intervalRemaining = nextRequestAt - now;
+
+
+                long waitTime =
+                        Math.max(
+                                rateLimitRemainingTime,
+                                intervalRemaining
+                        );
+
+                /*
+                 * RateLimit情報がある場合、
+                 * Remainingに応じて速度を調整する。
+                 */
+                if (waitTime <= 0L && rateLimitRemaining >= 0) {
+                    long dynamicInterval = getDynamicRequestInterval();
+                    nextRequestAt = now + dynamicInterval;
+
+                    return;
+                }
+
+                /*
+                 * RateLimit情報がまだない場合。
+                 */
+                if (waitTime <= 0L && rateLimitRemaining < 0) {
+                    long interval = getConfiguredRequestInterval();
+                    nextRequestAt = now + interval;
+
+                    return;
+                }
+
+
+                try {
+                    wait(waitTime);
+                } catch (InterruptedException e) {
+                    if (!running) return;
+                }
+            }
+        }
+    }
+
+
+    /*
+     * ==========================================
+     * 動的Request間隔
+     * ==========================================
+     */
+    private long getDynamicRequestInterval() {
+
+        /*
+         * Limit情報がない。
+         */
+        if (rateLimitLimit <= 0) {
+            return getConfiguredRequestInterval();
+        }
+
+
+        /*
+         * 残量が十分にある場合。
+         *
+         * Workerが4つあるので、
+         * ここでは最小限の間隔にする。
+         */
+        if (rateLimitRemaining > LOW_RATE_LIMIT_REMAINING) {
+            return 50L;
+        }
+
+
+        /*
+         * 残量が少ない。
+         */
+        if (rateLimitRemaining > 0) {
+            return LOW_RATE_LIMIT_INTERVAL;
+        }
+
+
+        /*
+         * Remaining = 0。
+         *
+         * 基本的にはupdateRateLimit()で
+         * rateLimitUntilが設定される。
+         */
+        return getConfiguredRequestInterval();
+    }
+
+
+    /*
+     * ==========================================
+     * 設定値取得
+     * ==========================================
+     */
+    private long getConfiguredRequestInterval() {
+
+        long interval = Main.CONFIG.getRequestInterval();
+
+
+        if (interval <= 0) {
+            return FALLBACK_REQUEST_INTERVAL;
+        }
+
+        return interval;
+    }
+
+
+    /*
+     * ==========================================
+     * Queue Reset
+     * ==========================================
+     */
+    public synchronized void resetQueue() {
         worldGeneration++;
 
         queue.clear();
@@ -408,15 +702,25 @@ public class PlayerStatsCache {
 
         rateLimitUntil = 0L;
         nextRequestAt = 0L;
+
+        rateLimitRemaining = -1;
+        rateLimitLimit = -1;
+        rateLimitReset = -1L;
+
         inFlight.clear();
 
         notifyAll();
     }
 
+
+    /*
+     * ==========================================
+     * Cache Clear
+     * ==========================================
+     */
     public synchronized void clear() {
 
         cache.clear();
-
         queue.clear();
         pending.clear();
         requests.clear();
@@ -424,11 +728,17 @@ public class PlayerStatsCache {
         worldGeneration++;
 
         rateLimitUntil = 0L;
+        nextRequestAt = 0L;
+
+        rateLimitRemaining = -1;
+        rateLimitLimit = -1;
+        rateLimitReset = -1L;
 
         inFlight.clear();
 
         notifyAll();
     }
+
 
     public synchronized void remove(UUID uuid) {
         cache.remove(uuid);
@@ -439,27 +749,29 @@ public class PlayerStatsCache {
         }
 
         pending.remove(uuid);
+        inFlight.remove(uuid);
     }
 
+
     public synchronized PlayerStats getCached(UUID uuid) {
-
         CachedPlayerData cached = cache.get(uuid);
-
         if (cached == null) return null;
 
         return cached.getStats();
     }
 
+
     public synchronized int size() {
         return cache.size();
     }
+
 
     public synchronized int getQueueSize() {
         return queue.size();
     }
 
-    public void shutdown() {
 
+    public void shutdown() {
         running = false;
 
         synchronized (this) {
@@ -471,41 +783,14 @@ public class PlayerStatsCache {
         }
     }
 
+
     private void trimCache() {
-
         while (cache.size() > config.getMaxCacheSize()) {
-
             Iterator<Map.Entry<UUID, CachedPlayerData>> iterator = cache.entrySet().iterator();
 
             if (iterator.hasNext()) {
                 iterator.next();
                 iterator.remove();
-            }
-        }
-    }
-
-    private void awaitRequestPermit() {
-        synchronized (this) {
-            while (running) {
-                long now = System.currentTimeMillis();
-
-                long rateLimitRemaining = rateLimitUntil - now;
-                long intervalRemaining = nextRequestAt - now;
-
-                long waitTime = Math.max(rateLimitRemaining, intervalRemaining);
-
-                if (waitTime <= 0L) {
-                    nextRequestAt = now + Main.CONFIG.getRequestInterval();
-                    return;
-                }
-
-                try {
-                    wait(waitTime);
-                } catch (InterruptedException e) {
-                    if (!running) {
-                        return;
-                    }
-                }
             }
         }
     }
