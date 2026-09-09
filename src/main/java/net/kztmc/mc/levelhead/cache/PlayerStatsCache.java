@@ -74,7 +74,6 @@ public class PlayerStatsCache {
             new LinkedHashMap<UUID, CachedPlayerData>(128, 0.75f, true);
 
     private final Set<UUID> pending = new HashSet<UUID>();
-    private final Set<UUID> inFlight = new HashSet<UUID>();
     private final Map<UUID, Request> requests = new HashMap<UUID, Request>();
     private final PriorityQueue<Request> queue = new PriorityQueue<Request>();
     private final Thread[] workers;
@@ -83,6 +82,7 @@ public class PlayerStatsCache {
     private volatile boolean running = true;
     private long rateLimitUntil = 0L;
     private long nextRequestAt = 0L;
+    private final Set<UUID> inFlight = new HashSet<UUID>();
 
     public PlayerStatsCache(ModConfig config) {
         this.config = config;
@@ -151,16 +151,16 @@ public class PlayerStatsCache {
         final CountDownLatch latch = new CountDownLatch(1);
 
         Callback callback = new Callback() {
-            @Override
-            public void onSuccess(UUID uuid, PlayerStats stats) {
-                latch.countDown();
-            }
+                    @Override
+                    public void onSuccess(UUID uuid, PlayerStats stats) {
+                        latch.countDown();
+                    }
 
-            @Override
-            public void onFailure(UUID uuid, Exception exception) {
-                latch.countDown();
-            }
-        };
+                    @Override
+                    public void onFailure(UUID uuid, Exception exception) {
+                        latch.countDown();
+                    }
+                };
 
         enqueue(uuid, priority, callback);
 
@@ -176,7 +176,7 @@ public class PlayerStatsCache {
     }
 
     private synchronized void enqueue(UUID uuid, Priority priority, Callback callback) {
-        if (pending.contains(uuid) || inFlight.contains(uuid)) {
+        if (pending.contains(uuid)) {
             Request current = requests.get(uuid);
 
             if (current == null) return;
@@ -185,7 +185,7 @@ public class PlayerStatsCache {
                 current.callbacks.add(callback);
             }
 
-            if (priority.value < current.priority.value && pending.contains(uuid)) {
+            if (priority.value < current.priority.value) {
                 queue.remove(current);
                 current.priority = priority;
                 queue.offer(current);
@@ -212,63 +212,42 @@ public class PlayerStatsCache {
                     try {
                         wait();
                     } catch (InterruptedException e) {
-                        if (!running) return;
+                        if (!running) {
+                            return;
+                        }
                     }
                 }
 
-                if (!running) return;
+                if (!running) {
+                    return;
+                }
 
                 request = queue.poll();
-                if (request == null) continue;
+
+                if (request == null) {
+                    continue;
+                }
 
                 pending.remove(request.uuid);
                 inFlight.add(request.uuid);
             }
 
-            boolean retry = false;
+            awaitRequestPermit();
 
-            try {
-                awaitRequestPermit();
-
-                if (!running) return;
-
-                retry = executeRequest(request);
-            } finally {
-                if (!retry) {
-                    synchronized (this) {
-                        if (requests.get(request.uuid) == request) {
-                            requests.remove(request.uuid);
-                            inFlight.remove(request.uuid);
-                        }
+            if (!running) {
+                synchronized (this) {
+                    if (requests.get(request.uuid) == request) {
+                        inFlight.remove(request.uuid);
                     }
                 }
+                return;
             }
+
+            executeRequest(request);
         }
     }
 
-    private void awaitRequestPermit() {
-        synchronized (this) {
-            while (running) {
-                long now = System.currentTimeMillis();
-                long rateLimitRemaining = rateLimitUntil - now;
-                long intervalRemaining = nextRequestAt - now;
-                long waitTime = Math.max(rateLimitRemaining, intervalRemaining);
-
-                if (waitTime <= 0L) {
-                    nextRequestAt = now + Main.CONFIG.getRequestInterval();
-                    return;
-                }
-
-                try {
-                    wait(waitTime);
-                } catch (InterruptedException e) {
-                    if (!running) return;
-                }
-            }
-        }
-    }
-
-    private boolean executeRequest(Request request) {
+    private void executeRequest(Request request) {
         final long requestGeneration;
 
         synchronized (this) {
@@ -278,13 +257,34 @@ public class PlayerStatsCache {
         try {
             ApiClient apiClient = Main.getApiClient();
 
-            if (apiClient == null) return false;
+            if (apiClient == null) {
+                synchronized (this) {
+                    if (requests.get(request.uuid) == request) {
+                        requests.remove(request.uuid);
+                        inFlight.remove(request.uuid);
+                    }
+                }
+                return;
+            }
 
             ApiClient.ApiResponse response = apiClient.fetchPlayer(request.uuid);
 
             synchronized (this) {
-                if (requestGeneration != worldGeneration) return false;
-                if (response == null || response.getStats() == null) return false;
+                if (requestGeneration != worldGeneration) {
+                    if (requests.get(request.uuid) == request) {
+                        requests.remove(request.uuid);
+                        inFlight.remove(request.uuid);
+                    }
+                    return;
+                }
+
+                if (response == null || response.getStats() == null) {
+                    if (requests.get(request.uuid) == request) {
+                        requests.remove(request.uuid);
+                        inFlight.remove(request.uuid);
+                    }
+                    return;
+                }
 
                 cache.put(
                         request.uuid,
@@ -295,60 +295,103 @@ public class PlayerStatsCache {
                 );
 
                 trimCache();
+
+                if (requests.get(request.uuid) == request) {
+                    requests.remove(request.uuid);
+                    inFlight.remove(request.uuid);
+                }
             }
 
+            /*
+             * callbacks をコピーしてから実行する。
+             * 他のスレッドから callbacks が変更されても
+             * ConcurrentModificationException にならないようにする。
+             */
             Set<Callback> callbacks;
+
             synchronized (this) {
                 callbacks = new HashSet<Callback>(request.callbacks);
             }
 
             for (Callback callback : callbacks) {
-                callback.onSuccess(request.uuid, response.getStats());
+                try {
+                    callback.onSuccess(request.uuid, response.getStats());
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
             }
-
-            return false;
 
         } catch (Exception e) {
 
-            if (e instanceof HypixelApiException && ((HypixelApiException) e).isRateLimited()) {
+            if (e instanceof HypixelApiException
+                    && ((HypixelApiException) e).isRateLimited()) {
 
-                System.err.println("[LevelHead] Hypixel API rate limited. Pausing requests for 60 seconds.");
+                System.err.println(
+                        "[LevelHead] Hypixel API rate limited. Pausing requests for 60 seconds."
+                );
 
                 synchronized (this) {
-                    if (requestGeneration != worldGeneration) return false;
+                    if (requestGeneration != worldGeneration) {
+                        if (requests.get(request.uuid) == request) {
+                            requests.remove(request.uuid);
+                            inFlight.remove(request.uuid);
+                        }
+                        return;
+                    }
 
                     rateLimitUntil = Math.max(
                             rateLimitUntil,
                             System.currentTimeMillis() + 60000L
                     );
 
+                    /*
+                     * 現在のRequestをそのまま再利用する。
+                     * 新しいRequestを作ると、同じUUIDについて
+                     * requests / inFlight の管理が複雑になる。
+                     */
                     inFlight.remove(request.uuid);
 
-                    if (!pending.contains(request.uuid)) {
+                    if (!pending.contains(request.uuid)
+                            && requests.get(request.uuid) == request) {
+
                         pending.add(request.uuid);
-                        requests.put(request.uuid, request);
                         queue.offer(request);
+
+                        notifyAll();
                     }
 
                     notifyAll();
                 }
 
-                return true;
+                return;
             }
 
-            System.err.println("[LevelHead] Failed to fetch " + request.uuid);
+            synchronized (this) {
+                if (requests.get(request.uuid) == request) {
+                    requests.remove(request.uuid);
+                    inFlight.remove(request.uuid);
+                }
+            }
+
+            System.err.println(
+                    "[LevelHead] Failed to fetch " + request.uuid
+            );
+
             e.printStackTrace();
 
             Set<Callback> callbacks;
+
             synchronized (this) {
                 callbacks = new HashSet<Callback>(request.callbacks);
             }
 
             for (Callback callback : callbacks) {
-                callback.onFailure(request.uuid, e);
+                try {
+                    callback.onFailure(request.uuid, e);
+                } catch (Exception callbackException) {
+                    callbackException.printStackTrace();
+                }
             }
-
-            return false;
         }
     }
 
@@ -359,10 +402,10 @@ public class PlayerStatsCache {
         queue.clear();
         pending.clear();
         requests.clear();
-        inFlight.clear();
 
         rateLimitUntil = 0L;
         nextRequestAt = 0L;
+        inFlight.clear();
 
         notifyAll();
     }
@@ -374,12 +417,12 @@ public class PlayerStatsCache {
         queue.clear();
         pending.clear();
         requests.clear();
-        inFlight.clear();
 
         worldGeneration++;
 
         rateLimitUntil = 0L;
-        nextRequestAt = 0L;
+
+        inFlight.clear();
 
         notifyAll();
     }
@@ -393,7 +436,6 @@ public class PlayerStatsCache {
         }
 
         pending.remove(uuid);
-        inFlight.remove(uuid);
     }
 
     public synchronized PlayerStats getCached(UUID uuid) {
@@ -435,6 +477,32 @@ public class PlayerStatsCache {
             if (iterator.hasNext()) {
                 iterator.next();
                 iterator.remove();
+            }
+        }
+    }
+
+    private void awaitRequestPermit() {
+        synchronized (this) {
+            while (running) {
+                long now = System.currentTimeMillis();
+
+                long rateLimitRemaining = rateLimitUntil - now;
+                long intervalRemaining = nextRequestAt - now;
+
+                long waitTime = Math.max(rateLimitRemaining, intervalRemaining);
+
+                if (waitTime <= 0L) {
+                    nextRequestAt = now + Main.CONFIG.getRequestInterval();
+                    return;
+                }
+
+                try {
+                    wait(waitTime);
+                } catch (InterruptedException e) {
+                    if (!running) {
+                        return;
+                    }
+                }
             }
         }
     }
