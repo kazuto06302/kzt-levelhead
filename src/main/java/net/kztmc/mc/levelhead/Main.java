@@ -127,11 +127,9 @@ public class Main {
 
         if (mc.getNetHandler() == null) return;
 
-        Collection<NetworkPlayerInfo> players =
-                mc.getNetHandler().getPlayerInfoMap();
+        Collection<NetworkPlayerInfo> players = mc.getNetHandler().getPlayerInfoMap();
 
         int playerCount = players.size();
-
         if (playerCount >= 24) return;
 
         queueAssignmentAllowed = isQueueAssignmentAllowed();
@@ -152,12 +150,7 @@ public class Main {
                 continue;
             }
 
-            if (Main.dev) {
-                LevelHeadCommand.send(
-                        mc.thePlayer,
-                        "QUEUE CHECK: " + info.getGameProfile().getName()
-                );
-            }
+            if (Main.dev) LevelHeadCommand.send(mc.thePlayer, "QUEUE CHECK: " + info.getGameProfile().getName());
 
             CACHE.get(
                     info.getGameProfile().getId(),
@@ -183,27 +176,17 @@ public class Main {
     }
 
     private boolean isQueueAssignmentAllowed() {
-        if (Main.dev) {
-            LevelHeadCommand.send(
-                    mc.thePlayer,
-                    "QUEUE CHECKING"
-            );
-        }
+        if (Main.dev) LevelHeadCommand.send(mc.thePlayer, "QUEUE CHECKING");
 
         if (mc.theWorld == null) return false;
 
         Scoreboard scoreboard = mc.theWorld.getScoreboard();
         if (scoreboard == null) return false;
 
-        ScoreObjective objective =
-                scoreboard.getObjectiveInDisplaySlot(1);
-
+        ScoreObjective objective = scoreboard.getObjectiveInDisplaySlot(1);
         if (objective == null) return false;
 
-        List<Score> scores = new ArrayList<Score>(
-                scoreboard.getSortedScores(objective)
-        );
-
+        List<Score> scores = new ArrayList<Score>(scoreboard.getSortedScores(objective));
         List<String> lines = new ArrayList<String>();
 
         for (Score score : scores) {
@@ -219,65 +202,48 @@ public class Main {
             lines.add(line);
         }
 
-        if (lines.isEmpty()) {
-            return false;
-        }
+        if (lines.isEmpty()) return false;
 
-        if (Main.dev) {
-            for (int i = 0; i < lines.size(); i++) {
-                LevelHeadCommand.send(
-                        mc.thePlayer,
-                        i + ": " + lines.get(i)
-                );
-            }
-
-            String topLine = lines.get(lines.size() - 1);
-
-            LevelHeadCommand.send(
-                    mc.thePlayer,
-                    "TOP: " + topLine
-            );
-
-            LevelHeadCommand.send(
-                    mc.thePlayer,
-                    "DATE/M CHECK: " + isDateAndMLine(topLine)
-            );
-        }
+//        log export scoreboard
+//        if (Main.dev) {
+//            for (int i = 0; i < lines.size(); i++) {
+//                LevelHeadCommand.send(
+//                        mc.thePlayer,
+//                        i + ": " + lines.get(i)
+//                );
+//            }
+//
+//            String topLine = lines.get(lines.size() - 1);
+//
+//            LevelHeadCommand.send(
+//                    mc.thePlayer,
+//                    "TOP: " + topLine
+//            );
+//
+//            LevelHeadCommand.send(
+//                    mc.thePlayer,
+//                    "DATE/M CHECK: " + isDateAndMLine(topLine)
+//            );
+//        }
 
         String firstLine = lines.get(lines.size() - 1);
-
-        if (!isDateAndMLine(firstLine)) {
-            return false;
-        }
+        if (!isDateAndMLine(firstLine)) return false;
 
         String lastLine = lines.get(0);
-
         String cleanLastLine = removeFormattingCodes(lastLine);
 
-        if (!"www.hypixel.net".equals(cleanLastLine)) {
-            return false;
-        }
+        if (!"www.hypixel.net".equals(cleanLastLine)) return false;
 
-        if (Main.dev) {
-            LevelHeadCommand.send(
-                    mc.thePlayer,
-                    "QUEUE ALLOWED"
-            );
-        }
+        if (Main.dev) LevelHeadCommand.send(mc.thePlayer, "QUEUE ALLOWED");
 
         return true;
     }
 
     private boolean isDateAndMLine(String text) {
-        if (text == null) {
-            return false;
-        }
+        if (text == null) return false;
 
         String visible = removeFormattingCodes(text);
-
-        return visible.matches(
-                "^\\d{2}/\\d{2}/\\d{2}\\s+m.*"
-        );
+        return visible.matches("^\\d{2}/\\d{2}/\\d{2}\\s+m.*");
     }
 
     private String removeFormattingCodes(String text) {
