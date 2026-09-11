@@ -370,6 +370,7 @@ public class PlayerStatsCache {
                 return;
             }
 
+            if (Main.dev) LevelHeadCommand.send(Minecraft.getMinecraft().thePlayer, "API Request: " + request.uuid);
 
             ApiClient.ApiResponse response = apiClient.fetchPlayer(request.uuid);
 
