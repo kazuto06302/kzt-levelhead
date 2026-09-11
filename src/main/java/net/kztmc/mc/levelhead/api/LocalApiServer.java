@@ -17,9 +17,7 @@ import java.util.UUID;
 public class LocalApiServer {
 
     private static final String HOST = "127.0.0.1";
-
     private static final int PORT = 3015;
-
     private static final long WAIT_TIMEOUT = 30000L;
 
     private HttpServer server;
@@ -29,7 +27,6 @@ public class LocalApiServer {
         if (server != null) return;
 
         try {
-
             server = HttpServer.create(new InetSocketAddress(HOST, PORT), 0);
             server.createContext("/v2/player", new PlayerHandler());
             server.setExecutor(null);
@@ -45,7 +42,6 @@ public class LocalApiServer {
     }
 
     public void stop() {
-
         if (server == null) return;
 
         server.stop(0);
@@ -54,19 +50,16 @@ public class LocalApiServer {
         System.out.println("[LevelHead] Local API stopped");
     }
 
-    private static class PlayerHandler
-            implements com.sun.net.httpserver.HttpHandler {
+    private static class PlayerHandler implements com.sun.net.httpserver.HttpHandler {
 
         @Override
         public void handle(HttpExchange exchange) throws IOException {
-
             if (!exchange.getRequestMethod().equalsIgnoreCase("GET")) {
                 sendResponse(exchange, 405, createError("Method Not Allowed"));
                 return;
             }
 
             try {
-
                 URI uri = exchange.getRequestURI();
                 String query = uri.getRawQuery();
                 String uuidString = getQueryParameter(query, "uuid");
@@ -104,7 +97,6 @@ public class LocalApiServer {
     }
 
     private static UUID parseUuid(String value) {
-
         try {
             return UUID.fromString(value);
 

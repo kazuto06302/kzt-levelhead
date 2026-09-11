@@ -26,8 +26,6 @@ public class PlayerLevelRenderer {
 
         if (mc.theWorld == null || mc.thePlayer == null) return;
 
-        if (!Main.isQueueAssignmentAllowedCached()) return;
-
         for (EntityPlayer player : mc.theWorld.playerEntities) {
 
             if (player == null) continue;
@@ -37,22 +35,34 @@ public class PlayerLevelRenderer {
 
             if (distance > 64.0F) continue;
 
-            PlayerStatsCache.Priority priority;
+            PlayerStats stats;
 
-            if (distance <= 16.0F) {
-                priority = PlayerStatsCache.Priority.HIGH;
+            if (Main.isQueueAssignmentAllowedCached()) {
+                //ingame
 
-            } else if (distance <= 48.0F) {
-                priority = PlayerStatsCache.Priority.NORMAL;
+                PlayerStatsCache.Priority priority;
+
+                if (distance <= 16.0F) {
+                    priority = PlayerStatsCache.Priority.HIGH;
+
+                } else if (distance <= 48.0F) {
+                    priority = PlayerStatsCache.Priority.NORMAL;
+
+                } else {
+                    priority = PlayerStatsCache.Priority.LOW;
+                }
+
+                stats = Main.CACHE.get(
+                        player.getUniqueID(),
+                        priority
+                );
 
             } else {
-                priority = PlayerStatsCache.Priority.LOW;
+                //outgame
+                stats = Main.CACHE.getCached(
+                        player.getUniqueID()
+                );
             }
-
-            PlayerStats stats = Main.CACHE.get(
-                    player.getUniqueID(),
-                    priority
-            );
 
             if (stats == null) continue;
 
@@ -72,14 +82,7 @@ public class PlayerLevelRenderer {
         }
     }
 
-    private void render(
-            EntityPlayer player,
-            double x,
-            double y,
-            double z,
-            PlayerStats stats
-    ) {
-
+    private void render(EntityPlayer player, double x, double y, double z, PlayerStats stats) {
         String text = "";
 
         ModConfig.LevelType levelType = Main.CONFIG.getLevelType();
@@ -99,7 +102,6 @@ public class PlayerLevelRenderer {
         float scale = 0.025F;
 
         boolean hasBelowName = hasBelowNameObjective(player);
-
         float yOffset;
 
         if (hasBelowName) {
@@ -115,11 +117,7 @@ public class PlayerLevelRenderer {
 
         GL11.glPushMatrix();
 
-        GL11.glTranslatef(
-                (float) x,
-                (float) y + yOffset,
-                (float) z
-        );
+        GL11.glTranslatef((float) x, (float) y + yOffset, (float) z);
 
         GL11.glRotatef(
                 -mc.getRenderManager().playerViewY,
@@ -135,11 +133,7 @@ public class PlayerLevelRenderer {
                 0.0F
         );
 
-        GL11.glScalef(
-                -scale,
-                -scale,
-                scale
-        );
+        GL11.glScalef(-scale, -scale, scale);
 
         GL11.glDisable(GL11.GL_LIGHTING);
         GL11.glDisable(GL11.GL_DEPTH_TEST);
@@ -178,29 +172,19 @@ public class PlayerLevelRenderer {
     }
 
     private boolean hasBelowNameObjective(EntityPlayer player) {
-
         if (mc.theWorld == null) return false;
 
-        ScoreObjective objective =
-                mc.theWorld.getScoreboard().getObjectiveInDisplaySlot(2);
+        ScoreObjective objective = mc.theWorld.getScoreboard().getObjectiveInDisplaySlot(2);
 
         if (objective == null) return false;
 
         String playerName = player.getName();
-
         if (playerName == null) return false;
 
-        return mc.theWorld.getScoreboard()
-                .getValueFromObjective(playerName, objective) != null;
+        return mc.theWorld.getScoreboard().getValueFromObjective(playerName, objective) != null;
     }
 
-    private void drawBackground(
-            float x,
-            float y,
-            float width,
-            float height
-    ) {
-
+    private void drawBackground(float x, float y, float width, float height) {
         Tessellator tessellator = Tessellator.getInstance();
         WorldRenderer renderer = tessellator.getWorldRenderer();
 
