@@ -126,6 +126,18 @@ public class Main {
         for (NetworkPlayerInfo info : players) {
             if (info == null || info.getGameProfile() == null) continue;
 
+            String displayName = info.getPlayerTeam() == null
+                    ? info.getGameProfile().getName()
+                    : ScorePlayerTeam.formatPlayerName(
+                    info.getPlayerTeam(),
+                    info.getGameProfile().getName()
+            );
+
+            // §k（難読化）が含まれているプレイヤーはキューしない
+            if (displayName.contains("§k")) {
+                continue;
+            }
+
             CACHE.get(info.getGameProfile().getId(), PlayerStatsCache.Priority.HIGH);
         }
     }
@@ -181,9 +193,7 @@ public class Main {
 
         // 1行目の10文字目が「m」
         String firstLine = lines.get(0);
-        if (firstLine.length() < 10 || firstLine.charAt(9) != 'm') {
-            return false;
-        }
+        if (getVisibleChar(firstLine, 9) != 'm') return false;
 
         // 最後の行が「§ewww.hypixel.net」
         String lastLine = lines.get(lines.size() - 1);
@@ -192,5 +202,25 @@ public class Main {
         }
 
         return true;
+    }
+
+    private char getVisibleChar(String text, int index) {
+        int visibleIndex = 0;
+
+        for (int i = 0; i < text.length(); i++) {
+            char c = text.charAt(i);
+
+            // § + カラーコードをスキップ
+            if (c == '§' && i + 1 < text.length()) {
+                i++;
+                continue;
+            }
+
+            if (visibleIndex == index) return c;
+
+            visibleIndex++;
+        }
+
+        return '\0';
     }
 }
