@@ -43,12 +43,13 @@ public class Main {
     public static PlayerStatsCache CACHE;
 
     private static ApiClient apiClient;
+    private static LocalApiServer localApiServer;
 
     private final Minecraft mc = Minecraft.getMinecraft();
 
     private int tabCheckTimer = 0;
 
-    private static LocalApiServer localApiServer;
+    private static volatile boolean queueAssignmentAllowed = false;
 
     public static boolean dev = false;
 
@@ -104,15 +105,25 @@ public class Main {
         return apiClient;
     }
 
+    public static boolean isQueueAssignmentAllowedCached() {
+        return queueAssignmentAllowed;
+    }
+
     @SubscribeEvent
     public void onClientTick(TickEvent.ClientTickEvent event) {
         if (event.phase != TickEvent.Phase.END) return;
-        if (mc.theWorld == null || mc.thePlayer == null) return;
+
+        if (mc.theWorld == null || mc.thePlayer == null) {
+            queueAssignmentAllowed = false;
+            return;
+        }
 
         tabCheckTimer++;
 
         if (tabCheckTimer < 20) return;
+
         tabCheckTimer = 0;
+        queueAssignmentAllowed = false;
 
         if (mc.getNetHandler() == null) return;
 
@@ -122,7 +133,10 @@ public class Main {
         int playerCount = players.size();
 
         if (playerCount >= 24) return;
-        if (!isQueueAssignmentAllowed()) return;
+
+        queueAssignmentAllowed = isQueueAssignmentAllowed();
+
+        if (!queueAssignmentAllowed) return;
 
         for (NetworkPlayerInfo info : players) {
             if (info == null || info.getGameProfile() == null) continue;
@@ -155,7 +169,6 @@ public class Main {
     @SubscribeEvent
     public void onPlayerLoggedOut(PlayerEvent.PlayerLoggedOutEvent event) {
         if (event.player == null) return;
-
         CACHE.remove(event.player.getUniqueID());
     }
 
@@ -165,11 +178,11 @@ public class Main {
             CACHE.resetQueue();
         }
 
+        queueAssignmentAllowed = false;
         tabCheckTimer = 0;
     }
 
     private boolean isQueueAssignmentAllowed() {
-
         if (Main.dev) {
             LevelHeadCommand.send(
                     mc.thePlayer,

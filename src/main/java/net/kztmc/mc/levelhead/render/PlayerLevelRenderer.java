@@ -26,6 +26,8 @@ public class PlayerLevelRenderer {
 
         if (mc.theWorld == null || mc.thePlayer == null) return;
 
+        if (!Main.isQueueAssignmentAllowedCached()) return;
+
         for (EntityPlayer player : mc.theWorld.playerEntities) {
 
             if (player == null) continue;
