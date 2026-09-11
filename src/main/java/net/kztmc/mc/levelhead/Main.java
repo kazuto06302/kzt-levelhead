@@ -51,6 +51,8 @@ public class Main {
 
     private static LocalApiServer localApiServer;
 
+    public static boolean dev = false;
+
     @Mod.EventHandler
     public void preInit(FMLPreInitializationEvent event) {
         CONFIG = new ModConfig(event.getModConfigurationDirectory());

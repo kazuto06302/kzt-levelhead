@@ -3,7 +3,9 @@ package net.kztmc.mc.levelhead.cache;
 import net.kztmc.mc.levelhead.Main;
 import net.kztmc.mc.levelhead.api.ApiClient;
 import net.kztmc.mc.levelhead.api.HypixelApiException;
+import net.kztmc.mc.levelhead.command.LevelHeadCommand;
 import net.kztmc.mc.levelhead.config.ModConfig;
+import net.minecraft.client.Minecraft;
 
 import java.util.HashMap;
 import java.util.HashSet;
@@ -408,6 +410,8 @@ public class PlayerStatsCache {
                         )
                 );
 
+                if (Main.dev) LevelHeadCommand.send(Minecraft.getMinecraft().thePlayer, "Cached: "+ request.uuid);
+
 
                 trimCache();
 
@@ -448,7 +452,7 @@ public class PlayerStatsCache {
              */
 
             if (e instanceof HypixelApiException && ((HypixelApiException) e).isRateLimited()) {
-
+                if (Main.dev) LevelHeadCommand.send(Minecraft.getMinecraft().thePlayer, "rate limit");
                 System.err.println("[LevelHead] Hypixel API rate limited. Pausing requests for 60 seconds.");
 
 
@@ -694,6 +698,7 @@ public class PlayerStatsCache {
      * ==========================================
      */
     public synchronized void resetQueue() {
+        if (Main.dev) LevelHeadCommand.send(Minecraft.getMinecraft().thePlayer, "resetQueue");
         worldGeneration++;
 
         queue.clear();

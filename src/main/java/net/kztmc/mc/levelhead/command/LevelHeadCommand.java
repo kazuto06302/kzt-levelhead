@@ -109,6 +109,12 @@ public class LevelHeadCommand extends CommandBase {
             return;
         }
 
+        if (args[0].equalsIgnoreCase("dev")) {
+            Main.dev = !Main.dev;
+            send(sender,"Developer Mode: " + Main.dev);
+            return;
+        }
+
         help(sender);
     }
 

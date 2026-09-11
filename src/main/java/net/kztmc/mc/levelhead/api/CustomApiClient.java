@@ -2,8 +2,11 @@ package net.kztmc.mc.levelhead.api;
 
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import net.kztmc.mc.levelhead.Main;
 import net.kztmc.mc.levelhead.cache.PlayerStats;
+import net.kztmc.mc.levelhead.command.LevelHeadCommand;
 import net.kztmc.mc.levelhead.config.ModConfig;
+import net.minecraft.client.Minecraft;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
@@ -23,11 +26,9 @@ public class CustomApiClient implements ApiClient {
     @Override
     public ApiResponse fetchPlayer(UUID uuid) throws Exception {
 
-        String template =
-                config.getCustomApiUrl();
+        String template = config.getCustomApiUrl();
 
-        if (template == null ||
-                template.trim().isEmpty()) {
+        if (template == null || template.trim().isEmpty()) {
 
             throw new IllegalStateException(
                     "Custom API URL is not configured"
@@ -41,6 +42,8 @@ public class CustomApiClient implements ApiClient {
                 );
 
         URL url = new URL(urlString);
+
+        if (Main.dev) LevelHeadCommand.send(Minecraft.getMinecraft().thePlayer, "Request: "+ uuid);
 
         HttpURLConnection connection =
                 (HttpURLConnection) url.openConnection();
