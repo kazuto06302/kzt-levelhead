@@ -263,7 +263,7 @@ public class PlayerStatsCache {
 
     private synchronized void enqueue(UUID uuid, Priority priority, Callback callback) {
 
-        if (pending.contains(uuid)) {
+        if (pending.contains(uuid) || inFlight.contains(uuid)) {
             Request current = requests.get(uuid);
 
 
@@ -275,9 +275,14 @@ public class PlayerStatsCache {
 
 
             if (priority.value < current.priority.value) {
-                queue.remove(current);
-                current.priority = priority;
-                queue.offer(current);
+                if (pending.contains(uuid)) {
+                    queue.remove(current);
+                    current.priority = priority;
+                    queue.offer(current);
+                } else {
+                    // API実行中なのでqueueには戻さず、優先度だけ更新
+                    current.priority = priority;
+                }
             }
 
             return;
@@ -285,6 +290,8 @@ public class PlayerStatsCache {
 
 
         Request request = new Request(uuid, priority, callback);
+
+        if (Main.dev) LevelHeadCommand.send(Minecraft.getMinecraft().thePlayer, "Request queued: " + uuid);
 
         pending.add(uuid);
         requests.put(uuid, request);

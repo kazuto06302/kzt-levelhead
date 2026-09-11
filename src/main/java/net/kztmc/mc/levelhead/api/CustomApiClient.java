@@ -29,24 +29,14 @@ public class CustomApiClient implements ApiClient {
         String template = config.getCustomApiUrl();
 
         if (template == null || template.trim().isEmpty()) {
-
-            throw new IllegalStateException(
-                    "Custom API URL is not configured"
-            );
+            throw new IllegalStateException("Custom API URL is not configured");
         }
 
-        String urlString =
-                template.replace(
-                        "{uuid}",
-                        uuid.toString()
-                );
+        String urlString = template.replace("{uuid}", uuid.toString());
 
         URL url = new URL(urlString);
 
-        if (Main.dev) LevelHeadCommand.send(Minecraft.getMinecraft().thePlayer, "Request: "+ uuid);
-
-        HttpURLConnection connection =
-                (HttpURLConnection) url.openConnection();
+        HttpURLConnection connection = (HttpURLConnection) url.openConnection();
 
         try {
             connection.setRequestMethod("GET");
@@ -62,15 +52,10 @@ public class CustomApiClient implements ApiClient {
             connection.setConnectTimeout(5000);
             connection.setReadTimeout(5000);
 
-            int responseCode =
-                    connection.getResponseCode();
+            int responseCode = connection.getResponseCode();
 
-            if (responseCode < 200 ||
-                    responseCode >= 300) {
-
-                throw new Exception(
-                        "HTTP " + responseCode
-                );
+            if (responseCode < 200 || responseCode >= 300) {
+                throw new Exception("HTTP " + responseCode);
             }
 
             BufferedReader reader =
@@ -81,8 +66,7 @@ public class CustomApiClient implements ApiClient {
                             )
                     );
 
-            StringBuilder response =
-                    new StringBuilder();
+            StringBuilder response = new StringBuilder();
 
             String line;
 
