@@ -176,7 +176,7 @@ public class Main {
     }
 
     private boolean isQueueAssignmentAllowed() {
-        if (Main.dev) LevelHeadCommand.send(mc.thePlayer, "QUEUE CHECKING");
+//        if (Main.dev) LevelHeadCommand.send(mc.thePlayer, "QUEUE CHECKING");
 
         if (mc.theWorld == null) return false;
 
@@ -234,7 +234,7 @@ public class Main {
 
         if (!"www.hypixel.net".equals(cleanLastLine)) return false;
 
-        if (Main.dev) LevelHeadCommand.send(mc.thePlayer, "QUEUE ALLOWED");
+//        if (Main.dev) LevelHeadCommand.send(mc.thePlayer, "QUEUE ALLOWED");
 
         return true;
     }
