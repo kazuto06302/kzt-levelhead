@@ -25,7 +25,6 @@ import net.minecraftforge.fml.common.gameevent.TickEvent;
 
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.List;
 
 @Mod(
@@ -107,7 +106,6 @@ public class Main {
 
     @SubscribeEvent
     public void onClientTick(TickEvent.ClientTickEvent event) {
-
         if (event.phase != TickEvent.Phase.END) return;
         if (mc.theWorld == null || mc.thePlayer == null) return;
 
@@ -117,7 +115,10 @@ public class Main {
         tabCheckTimer = 0;
 
         if (mc.getNetHandler() == null) return;
-        Collection<NetworkPlayerInfo> players = mc.getNetHandler().getPlayerInfoMap();
+
+        Collection<NetworkPlayerInfo> players =
+                mc.getNetHandler().getPlayerInfoMap();
+
         int playerCount = players.size();
 
         if (playerCount >= 24) return;
@@ -133,7 +134,6 @@ public class Main {
                     info.getGameProfile().getName()
             );
 
-            // §k（難読化）が含まれているプレイヤーはキューしない
             if (displayName.contains("§k")) {
                 continue;
             }
@@ -145,7 +145,10 @@ public class Main {
                 );
             }
 
-            CACHE.get(info.getGameProfile().getId(), PlayerStatsCache.Priority.HIGH);
+            CACHE.get(
+                    info.getGameProfile().getId(),
+                    PlayerStatsCache.Priority.HIGH
+            );
         }
     }
 
@@ -158,7 +161,6 @@ public class Main {
 
     @SubscribeEvent
     public void onWorldUnload(WorldEvent.Unload event) {
-
         if (CACHE != null) {
             CACHE.resetQueue();
         }
@@ -167,6 +169,7 @@ public class Main {
     }
 
     private boolean isQueueAssignmentAllowed() {
+
         if (Main.dev) {
             LevelHeadCommand.send(
                     mc.thePlayer,
@@ -179,14 +182,16 @@ public class Main {
         Scoreboard scoreboard = mc.theWorld.getScoreboard();
         if (scoreboard == null) return false;
 
-        ScoreObjective objective = scoreboard.getObjectiveInDisplaySlot(1);
+        ScoreObjective objective =
+                scoreboard.getObjectiveInDisplaySlot(1);
+
         if (objective == null) return false;
 
-        List<Score> scores = new ArrayList<>(
+        List<Score> scores = new ArrayList<Score>(
                 scoreboard.getSortedScores(objective)
         );
 
-        List<String> lines = new ArrayList<>();
+        List<String> lines = new ArrayList<String>();
 
         for (Score score : scores) {
             if (score.getPlayerName().startsWith("#")) {
@@ -201,6 +206,10 @@ public class Main {
             lines.add(line);
         }
 
+        if (lines.isEmpty()) {
+            return false;
+        }
+
         if (Main.dev) {
             for (int i = 0; i < lines.size(); i++) {
                 LevelHeadCommand.send(
@@ -209,28 +218,30 @@ public class Main {
                 );
             }
 
+            String topLine = lines.get(lines.size() - 1);
+
             LevelHeadCommand.send(
                     mc.thePlayer,
-                    "VISIBLE[9]: " + getVisibleChar(lines.get(lines.size() - 1), 9)
+                    "TOP: " + topLine
+            );
+
+            LevelHeadCommand.send(
+                    mc.thePlayer,
+                    "DATE/M CHECK: " + isDateAndMLine(topLine)
             );
         }
 
-        if (lines.isEmpty()) return false;
-
-        // getSortedScores() は画面上では下 → 上の順になる
-        // そのため、画面上の1行目は最後の要素
         String firstLine = lines.get(lines.size() - 1);
 
-        // 画面上の1行目の10文字目（色コードを除く）が「m」
-        if (getVisibleChar(firstLine, 9) != 'm') {
+        if (!isDateAndMLine(firstLine)) {
             return false;
         }
 
-        // 画面上の最後の行は最初の要素
         String lastLine = lines.get(0);
 
-        // 画面上の最後の行が「§ewww.hypixel.net」
-        if (!"§ewww.hypixel.net".equals(lastLine)) {
+        String cleanLastLine = removeFormattingCodes(lastLine);
+
+        if (!"www.hypixel.net".equals(cleanLastLine)) {
             return false;
         }
 
@@ -244,19 +255,49 @@ public class Main {
         return true;
     }
 
+    private boolean isDateAndMLine(String text) {
+        if (text == null) {
+            return false;
+        }
+
+        String visible = removeFormattingCodes(text);
+
+        return visible.matches(
+                "^\\d{2}/\\d{2}/\\d{2}\\s+m.*"
+        );
+    }
+
+    private String removeFormattingCodes(String text) {
+        StringBuilder result = new StringBuilder();
+
+        for (int i = 0; i < text.length(); i++) {
+            char c = text.charAt(i);
+
+            if (c == '§' && i + 1 < text.length()) {
+                i++;
+                continue;
+            }
+
+            result.append(c);
+        }
+
+        return result.toString();
+    }
+
     private char getVisibleChar(String text, int index) {
         int visibleIndex = 0;
 
         for (int i = 0; i < text.length(); i++) {
             char c = text.charAt(i);
 
-            // § + カラーコードをスキップ
             if (c == '§' && i + 1 < text.length()) {
                 i++;
                 continue;
             }
 
-            if (visibleIndex == index) return c;
+            if (visibleIndex == index) {
+                return c;
+            }
 
             visibleIndex++;
         }
