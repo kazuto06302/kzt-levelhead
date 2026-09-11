@@ -172,8 +172,6 @@ public class Main {
                 scoreboard.getSortedScores(objective)
         );
 
-        Collections.reverse(scores);
-
         List<String> lines = new ArrayList<>();
 
         for (Score score : scores) {
@@ -191,9 +189,11 @@ public class Main {
 
         if (lines.isEmpty()) return false;
 
-        // 1行目の10文字目が「m」
+        // 1行目の10文字目（色コードを除く）が「m」
         String firstLine = lines.get(0);
-        if (getVisibleChar(firstLine, 9) != 'm') return false;
+        if (getVisibleChar(firstLine, 9) != 'm') {
+            return false;
+        }
 
         // 最後の行が「§ewww.hypixel.net」
         String lastLine = lines.get(lines.size() - 1);
