@@ -138,6 +138,13 @@ public class Main {
                 continue;
             }
 
+            if (Main.dev) {
+                LevelHeadCommand.send(
+                        mc.thePlayer,
+                        "QUEUE CHECK: " + info.getGameProfile().getName()
+                );
+            }
+
             CACHE.get(info.getGameProfile().getId(), PlayerStatsCache.Priority.HIGH);
         }
     }
@@ -160,6 +167,13 @@ public class Main {
     }
 
     private boolean isQueueAssignmentAllowed() {
+        if (Main.dev) {
+            LevelHeadCommand.send(
+                    mc.thePlayer,
+                    "QUEUE CHECKING"
+            );
+        }
+
         if (mc.theWorld == null) return false;
 
         Scoreboard scoreboard = mc.theWorld.getScoreboard();
@@ -187,6 +201,20 @@ public class Main {
             lines.add(line);
         }
 
+        if (Main.dev) {
+            for (int i = 0; i < lines.size(); i++) {
+                LevelHeadCommand.send(
+                        mc.thePlayer,
+                        i + ": " + lines.get(i)
+                );
+            }
+
+            LevelHeadCommand.send(
+                    mc.thePlayer,
+                    "VISIBLE[9]: " + getVisibleChar(lines.get(lines.size() - 1), 9)
+            );
+        }
+
         if (lines.isEmpty()) return false;
 
         // getSortedScores() は画面上では下 → 上の順になる
@@ -204,6 +232,13 @@ public class Main {
         // 画面上の最後の行が「§ewww.hypixel.net」
         if (!"§ewww.hypixel.net".equals(lastLine)) {
             return false;
+        }
+
+        if (Main.dev) {
+            LevelHeadCommand.send(
+                    mc.thePlayer,
+                    "QUEUE ALLOWED"
+            );
         }
 
         return true;
