@@ -189,14 +189,19 @@ public class Main {
 
         if (lines.isEmpty()) return false;
 
-        // 1行目の10文字目（色コードを除く）が「m」
-        String firstLine = lines.get(0);
+        // getSortedScores() は画面上では下 → 上の順になる
+        // そのため、画面上の1行目は最後の要素
+        String firstLine = lines.get(lines.size() - 1);
+
+        // 画面上の1行目の10文字目（色コードを除く）が「m」
         if (getVisibleChar(firstLine, 9) != 'm') {
             return false;
         }
 
-        // 最後の行が「§ewww.hypixel.net」
-        String lastLine = lines.get(lines.size() - 1);
+        // 画面上の最後の行は最初の要素
+        String lastLine = lines.get(0);
+
+        // 画面上の最後の行が「§ewww.hypixel.net」
         if (!"§ewww.hypixel.net".equals(lastLine)) {
             return false;
         }
