@@ -31,6 +31,8 @@ public class PlayerLevelRenderer {
             if (player == null) continue;
             if (player.isInvisible()) continue;
 
+            if (player == mc.thePlayer && mc.gameSettings.thirdPersonView == 0) continue;
+
             float distance = player.getDistanceToEntity(mc.thePlayer);
 
             if (distance > 64.0F) continue;
