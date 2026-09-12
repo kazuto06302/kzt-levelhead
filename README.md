@@ -5,7 +5,6 @@
 ・完全にカスタマイズ可能な見た目を目指す
 
 ### 機能
-（ ） は導入予定段階  
 
 __Stats取得方法__  
 ・Hypixel公式API  
@@ -14,11 +13,11 @@ __Stats取得方法__
 __取得可能な情報__  
 ・Networkレベル  
 ・Bedwarsスター  
-（・Skywarsスター ）  
-（・UHCレベル ）  
+・Skywarsスター  
+・UHCレベル   
 
 __追加機能__  
-・SeraphとのAPI競合対策  
+・SeraphとのAPI競合対策
 （・ランクの同時表示 例: V, V+, M, M+, ++, NI, YT ）  
 （・スターのカラー化 ）  
 （・スターブースター ）  
@@ -26,7 +25,9 @@ __追加機能__
 
 __API__  
 ・Seraphとの競合によりAPI Limitの制限を、  
-　APIのセルフホストとSeraphの機能「Custom API」で実現
+　APIのセルフホストとSeraphの機能「Custom Hypixel Proxy」で実現  
 ・ポート3015でHypixelAPIの取得結果をそのままポート。
+・標準6時間のキャッシュ機能により重複したAPI取得を防止、レート制限を対策。
+・ingame中のみの表示でロビーのプレイヤーの不要な取得を防止。
 
 **Dev : Kazut0_@kztmc.net**
