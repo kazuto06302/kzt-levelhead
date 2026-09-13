@@ -9,10 +9,8 @@ import net.kztmc.mc.levelhead.cache.PlayerStatsCache;
 
 import java.io.IOException;
 import java.io.OutputStream;
-import java.io.UnsupportedEncodingException;
 import java.net.InetSocketAddress;
 import java.net.URLDecoder;
-import java.nio.charset.StandardCharsets;
 import java.util.UUID;
 import java.util.concurrent.Executors;
 
@@ -20,12 +18,6 @@ public class LocalApiServer {
 
     private static final String HOST = "127.0.0.1";
     private static final int PORT = 3015;
-
-    /*
-     * Seraphからの問い合わせ時、
-     * キャッシュになければAPI取得完了を最大この時間待つ。
-     */
-    private static final long CACHE_WAIT_TIMEOUT = 10000L;
 
     private HttpServer server;
 
@@ -37,11 +29,7 @@ public class LocalApiServer {
             );
 
             server.createContext("/v2/player", new PlayerHandler());
-
-            server.setExecutor(
-                    Executors.newCachedThreadPool()
-            );
-
+            server.setExecutor(Executors.newCachedThreadPool());
             server.start();
 
             System.out.println(
@@ -50,9 +38,7 @@ public class LocalApiServer {
             );
 
         } catch (IOException e) {
-            System.err.println(
-                    "[LevelHead] Failed to start local API server"
-            );
+            System.err.println("[LevelHead] Failed to start local API server");
             e.printStackTrace();
         }
     }
@@ -61,10 +47,7 @@ public class LocalApiServer {
         if (server != null) {
             server.stop(0);
             server = null;
-
-            System.out.println(
-                    "[LevelHead] Local API server stopped"
-            );
+            System.out.println("[LevelHead] Local API server stopped");
         }
     }
 
@@ -72,9 +55,7 @@ public class LocalApiServer {
 
         @Override
         public void handle(HttpExchange exchange) throws IOException {
-
             try {
-
                 UUID uuid = getUuid(exchange);
 
                 if (uuid == null) {
@@ -86,54 +67,31 @@ public class LocalApiServer {
                     return;
                 }
 
-                /*
-                 * まずキャッシュを確認。
-                 */
-                CachedPlayerData data =
-                        Main.CACHE.getCachedData(uuid);
+                CachedPlayerData data = Main.CACHE.getCachedData(uuid);
 
-                /*
-                 * キャッシュにない場合、
-                 * 実際にAPI取得が完了するまで待つ。
-                 */
-                if (data == null || data.getRawJson() == null) {
-
-                    data = Main.CACHE.getOrWait(
-                            uuid,
-                            PlayerStatsCache.Priority.HIGH,
-                            CACHE_WAIT_TIMEOUT
-                    );
-                }
-
-                /*
-                 * それでも取得できなかった。
-                 */
-                if (data == null || data.getRawJson() == null) {
-
-                    sendResponse(
-                            exchange,
-                            404,
-                            createError("Player not available")
-                    );
-
+                if (data != null && data.getRawJson() != null) {
+                    sendResponse(exchange, 200, data.getRawJson());
                     return;
                 }
 
                 /*
-                 * キャッシュ済みJSONをそのままSeraphへ返す。
+                 * SeraphのHTTPリクエストをAPI取得完了までブロックしない。
+                 * 取得はPlayerStatsCacheのバックグラウンドWorkerが行う。
+                 * 次回の問い合わせではキャッシュ済みJSONを即座に返せる。
                  */
+                Main.CACHE.get(
+                        uuid,
+                        PlayerStatsCache.Priority.HIGH
+                );
+
                 sendResponse(
                         exchange,
-                        200,
-                        data.getRawJson()
+                        404,
+                        createError("Player not available")
                 );
 
             } catch (Exception e) {
-
-                System.err.println(
-                        "[LevelHead] Local API request failed"
-                );
-
+                System.err.println("[LevelHead] Local API request failed");
                 e.printStackTrace();
 
                 sendResponse(
@@ -141,49 +99,25 @@ public class LocalApiServer {
                         500,
                         createError("Internal server error")
                 );
-
             } finally {
                 exchange.close();
             }
         }
 
-        private UUID getUuid(HttpExchange exchange) throws UnsupportedEncodingException {
-
-            /*
-             * ① Seraph形式
-             *
-             * /v2/player?uuid=xxxxxxxx
-             */
-            String query =
-                    exchange.getRequestURI().getRawQuery();
+        private UUID getUuid(HttpExchange exchange) throws IOException {
+            String query = exchange.getRequestURI().getRawQuery();
 
             if (query != null) {
-
-                String[] parameters =
-                        query.split("&");
+                String[] parameters = query.split("&");
 
                 for (String parameter : parameters) {
-
-                    String[] pair =
-                            parameter.split("=", 2);
-
+                    String[] pair = parameter.split("=", 2);
                     if (pair.length != 2) continue;
 
-                    String key =
-                            URLDecoder.decode(
-                                    pair[0],
-                                    "UTF-8"
-                            );
+                    String key = URLDecoder.decode(pair[0], "UTF-8");
+                    if (!"uuid".equalsIgnoreCase(key)) continue;
 
-                    if (!"uuid".equalsIgnoreCase(key)) {
-                        continue;
-                    }
-
-                    String value =
-                            URLDecoder.decode(
-                                    pair[1],
-                                    "UTF-8"
-                            );
+                    String value = URLDecoder.decode(pair[1], "UTF-8");
 
                     try {
                         return UUID.fromString(value);
@@ -193,18 +127,11 @@ public class LocalApiServer {
                 }
             }
 
-            /*
-             * ② /v2/player/<uuid> 形式もサポート
-             */
-            String path =
-                    exchange.getRequestURI().getPath();
-
+            String path = exchange.getRequestURI().getPath();
             String prefix = "/v2/player/";
 
             if (path.startsWith(prefix)) {
-
-                String uuidString =
-                        path.substring(prefix.length());
+                String uuidString = path.substring(prefix.length());
 
                 try {
                     return UUID.fromString(uuidString);
@@ -222,9 +149,7 @@ public class LocalApiServer {
             int status,
             String response
     ) throws IOException {
-
-        byte[] bytes =
-                response.getBytes(StandardCharsets.UTF_8);
+        byte[] bytes = response.getBytes("UTF-8");
 
         exchange.getResponseHeaders().set(
                 "Content-Type",
@@ -236,20 +161,14 @@ public class LocalApiServer {
                 "no-cache"
         );
 
-        exchange.sendResponseHeaders(
-                status,
-                bytes.length
-        );
+        exchange.sendResponseHeaders(status, bytes.length);
 
-        try (OutputStream output =
-                     exchange.getResponseBody()) {
-
+        try (OutputStream output = exchange.getResponseBody()) {
             output.write(bytes);
         }
     }
 
     private static String createError(String message) {
-
         return "{"
                 + "\"success\":false,"
                 + "\"cause\":\""
@@ -259,7 +178,6 @@ public class LocalApiServer {
     }
 
     private static String escapeJson(String text) {
-
         return text
                 .replace("\\", "\\\\")
                 .replace("\"", "\\\"");
