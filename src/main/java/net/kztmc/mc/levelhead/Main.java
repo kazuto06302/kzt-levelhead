@@ -10,10 +10,7 @@ import net.kztmc.mc.levelhead.config.ModConfig;
 import net.kztmc.mc.levelhead.render.PlayerLevelRenderer;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.network.NetworkPlayerInfo;
-import net.minecraft.scoreboard.Score;
-import net.minecraft.scoreboard.ScoreObjective;
 import net.minecraft.scoreboard.ScorePlayerTeam;
-import net.minecraft.scoreboard.Scoreboard;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.world.WorldEvent;
 import net.minecraftforge.fml.common.Mod;
@@ -23,9 +20,7 @@ import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
 import net.minecraftforge.fml.common.gameevent.PlayerEvent;
 import net.minecraftforge.fml.common.gameevent.TickEvent;
 
-import java.util.ArrayList;
 import java.util.Collection;
-import java.util.List;
 
 @Mod(
         modid = Main.MOD_ID,
@@ -123,18 +118,16 @@ public class Main {
         if (tabCheckTimer < 20) return;
 
         tabCheckTimer = 0;
-        queueAssignmentAllowed = false;
+
+        // Do not gate API requests behind Hypixel's scoreboard text.
+        // The old implementation required a very specific scoreboard format
+        // (date + "m" and "www.hypixel.net"), so when Hypixel changed the
+        // scoreboard the cache was never populated and nothing was rendered.
+        queueAssignmentAllowed = true;
 
         if (mc.getNetHandler() == null) return;
 
         Collection<NetworkPlayerInfo> players = mc.getNetHandler().getPlayerInfoMap();
-
-        int playerCount = players.size();
-        if (playerCount >= 24) return;
-
-        queueAssignmentAllowed = isQueueAssignmentAllowed();
-
-        if (!queueAssignmentAllowed) return;
 
         for (NetworkPlayerInfo info : players) {
             if (info == null || info.getGameProfile() == null) continue;
@@ -146,11 +139,17 @@ public class Main {
                     info.getGameProfile().getName()
             );
 
+            // Do not send obfuscated tab-list placeholders to the API.
             if (displayName.contains("§k")) {
                 continue;
             }
 
-            if (Main.dev) LevelHeadCommand.send(mc.thePlayer, "QUEUE CHECK: " + info.getGameProfile().getName());
+            if (Main.dev) {
+                LevelHeadCommand.send(
+                        mc.thePlayer,
+                        "QUEUE CHECK: " + info.getGameProfile().getName()
+                );
+            }
 
             CACHE.get(
                     info.getGameProfile().getId(),
@@ -173,114 +172,5 @@ public class Main {
 
         queueAssignmentAllowed = false;
         tabCheckTimer = 0;
-    }
-
-    private boolean isQueueAssignmentAllowed() {
-//        if (Main.dev) LevelHeadCommand.send(mc.thePlayer, "QUEUE CHECKING");
-
-        if (mc.theWorld == null) return false;
-
-        Scoreboard scoreboard = mc.theWorld.getScoreboard();
-        if (scoreboard == null) return false;
-
-        ScoreObjective objective = scoreboard.getObjectiveInDisplaySlot(1);
-        if (objective == null) return false;
-
-        List<Score> scores = new ArrayList<Score>(scoreboard.getSortedScores(objective));
-        List<String> lines = new ArrayList<String>();
-
-        for (Score score : scores) {
-            if (score.getPlayerName().startsWith("#")) {
-                continue;
-            }
-
-            String line = ScorePlayerTeam.formatPlayerName(
-                    scoreboard.getPlayersTeam(score.getPlayerName()),
-                    score.getPlayerName()
-            );
-
-            lines.add(line);
-        }
-
-        if (lines.isEmpty()) return false;
-
-//        log export scoreboard
-//        if (Main.dev) {
-//            for (int i = 0; i < lines.size(); i++) {
-//                LevelHeadCommand.send(
-//                        mc.thePlayer,
-//                        i + ": " + lines.get(i)
-//                );
-//            }
-//
-//            String topLine = lines.get(lines.size() - 1);
-//
-//            LevelHeadCommand.send(
-//                    mc.thePlayer,
-//                    "TOP: " + topLine
-//            );
-//
-//            LevelHeadCommand.send(
-//                    mc.thePlayer,
-//                    "DATE/M CHECK: " + isDateAndMLine(topLine)
-//            );
-//        }
-
-        String firstLine = lines.get(lines.size() - 1);
-        if (!isDateAndMLine(firstLine)) return false;
-
-        String lastLine = lines.get(0);
-        String cleanLastLine = removeFormattingCodes(lastLine);
-
-        if (!"www.hypixel.net".equals(cleanLastLine)) return false;
-
-//        if (Main.dev) LevelHeadCommand.send(mc.thePlayer, "QUEUE ALLOWED");
-
-        return true;
-    }
-
-    private boolean isDateAndMLine(String text) {
-        if (text == null) return false;
-
-        String visible = removeFormattingCodes(text);
-        return visible.matches("^\\d{2}/\\d{2}/\\d{2}\\s+m.*");
-    }
-
-    private String removeFormattingCodes(String text) {
-        StringBuilder result = new StringBuilder();
-
-        for (int i = 0; i < text.length(); i++) {
-            char c = text.charAt(i);
-
-            if (c == '§' && i + 1 < text.length()) {
-                i++;
-                continue;
-            }
-
-            result.append(c);
-        }
-
-        return result.toString();
-    }
-
-    private char getVisibleChar(String text, int index) {
-        int visibleIndex = 0;
-
-        for (int i = 0; i < text.length(); i++) {
-            char c = text.charAt(i);
-
-            if (c == '§' && i + 1 < text.length()) {
-                i++;
-                continue;
-            }
-
-            if (visibleIndex == index) {
-                return c;
-            }
-
-            visibleIndex++;
-        }
-
-        return '\0';
     }
 }
