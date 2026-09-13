@@ -58,24 +58,16 @@ public class LocalApiServer {
                     return;
                 }
 
-                CachedPlayerData data = Main.CACHE.getCachedData(uuid);
+                CachedPlayerData data = Main.CACHE.getOrWait(
+                        uuid,
+                        PlayerStatsCache.Priority.HIGH,
+                        8000L
+                );
 
-                /*
-                 * 最重要:
-                 * SeraphのHTTPリクエスト中にHypixel APIを待たない。
-                 * キャッシュ済みなら即座にそのまま返す。
-                 */
                 if (data != null && data.getRawJson() != null) {
                     sendResponse(exchange, 200, data.getRawJson());
                     return;
                 }
-
-                /*
-                 * 未取得ならバックグラウンドのAPI Workerへ投入。
-                 * Seraphを待たせないため、ここでは即404を返す。
-                 * 次回リクエストではキャッシュ済みJSONを返せる。
-                 */
-                Main.CACHE.get(uuid, PlayerStatsCache.Priority.HIGH);
 
                 sendResponse(
                         exchange,
