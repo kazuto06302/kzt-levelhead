@@ -23,11 +23,7 @@ public class LocalApiServer {
 
     public void start() {
         try {
-            server = HttpServer.create(
-                    new InetSocketAddress(HOST, PORT),
-                    0
-            );
-
+            server = HttpServer.create(new InetSocketAddress(HOST, PORT), 0);
             server.createContext("/v2/player", new PlayerHandler());
             server.setExecutor(Executors.newCachedThreadPool());
             server.start();
@@ -36,7 +32,6 @@ public class LocalApiServer {
                     "[LevelHead] Local API server started on "
                             + HOST + ":" + PORT
             );
-
         } catch (IOException e) {
             System.err.println("[LevelHead] Failed to start local API server");
             e.printStackTrace();
@@ -59,30 +54,28 @@ public class LocalApiServer {
                 UUID uuid = getUuid(exchange);
 
                 if (uuid == null) {
-                    sendResponse(
-                            exchange,
-                            400,
-                            createError("Invalid or missing UUID")
-                    );
+                    sendResponse(exchange, 400, createError("Invalid or missing UUID"));
                     return;
                 }
 
                 CachedPlayerData data = Main.CACHE.getCachedData(uuid);
 
+                /*
+                 * 最重要:
+                 * SeraphのHTTPリクエスト中にHypixel APIを待たない。
+                 * キャッシュ済みなら即座にそのまま返す。
+                 */
                 if (data != null && data.getRawJson() != null) {
                     sendResponse(exchange, 200, data.getRawJson());
                     return;
                 }
 
                 /*
-                 * SeraphのHTTPリクエストをAPI取得完了までブロックしない。
-                 * 取得はPlayerStatsCacheのバックグラウンドWorkerが行う。
-                 * 次回の問い合わせではキャッシュ済みJSONを即座に返せる。
+                 * 未取得ならバックグラウンドのAPI Workerへ投入。
+                 * Seraphを待たせないため、ここでは即404を返す。
+                 * 次回リクエストではキャッシュ済みJSONを返せる。
                  */
-                Main.CACHE.get(
-                        uuid,
-                        PlayerStatsCache.Priority.HIGH
-                );
+                Main.CACHE.get(uuid, PlayerStatsCache.Priority.HIGH);
 
                 sendResponse(
                         exchange,
@@ -93,12 +86,7 @@ public class LocalApiServer {
             } catch (Exception e) {
                 System.err.println("[LevelHead] Local API request failed");
                 e.printStackTrace();
-
-                sendResponse(
-                        exchange,
-                        500,
-                        createError("Internal server error")
-                );
+                sendResponse(exchange, 500, createError("Internal server error"));
             } finally {
                 exchange.close();
             }
@@ -107,6 +95,7 @@ public class LocalApiServer {
         private UUID getUuid(HttpExchange exchange) throws IOException {
             String query = exchange.getRequestURI().getRawQuery();
 
+            /* Seraph: /v2/player?uuid=<uuid> */
             if (query != null) {
                 String[] parameters = query.split("&");
 
@@ -127,6 +116,7 @@ public class LocalApiServer {
                 }
             }
 
+            /* /v2/player/<uuid> もサポート */
             String path = exchange.getRequestURI().getPath();
             String prefix = "/v2/player/";
 
@@ -155,12 +145,7 @@ public class LocalApiServer {
                 "Content-Type",
                 "application/json; charset=UTF-8"
         );
-
-        exchange.getResponseHeaders().set(
-                "Cache-Control",
-                "no-cache"
-        );
-
+        exchange.getResponseHeaders().set("Cache-Control", "no-cache");
         exchange.sendResponseHeaders(status, bytes.length);
 
         try (OutputStream output = exchange.getResponseBody()) {
