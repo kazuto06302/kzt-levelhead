@@ -161,7 +161,7 @@ public class HypixelApiClient implements ApiClient {
                 if (skywars != null) {
                     skywarsLevelFormatted = getString(
                             skywars,
-                            "levelFormatted"
+                            "levelFormattedWithBrackets"
                     );
                 }
 

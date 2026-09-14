@@ -65,11 +65,22 @@ public class Prestige {
         else if (level >= 10) prestige = "§7%1§7%2§7✫";
         else prestige = "§7%1✫";
 
-        return prestige
-                .replace("%1", String.valueOf((level / 1000) % 10))
-                .replace("%2", String.valueOf((level / 100) % 10))
-                .replace("%3", String.valueOf((level / 10) % 10))
-                .replace("%4", String.valueOf(level % 10));
+        String levelString = String.valueOf(level);
+
+        for (int i = 0; i < levelString.length(); i++) {
+            prestige = prestige.replace(
+                    "%" + (i + 1),
+                    String.valueOf(levelString.charAt(i))
+            );
+        }
+
+        prestige = prestige
+                .replace("%1", "")
+                .replace("%2", "")
+                .replace("%3", "")
+                .replace("%4", "");
+
+        return prestige;
     }
 
     public static String uhcPrestige(int level) {

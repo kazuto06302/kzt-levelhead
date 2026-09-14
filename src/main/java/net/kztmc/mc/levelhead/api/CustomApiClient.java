@@ -104,7 +104,7 @@ public class CustomApiClient implements ApiClient {
         if (root.has("hypixelLevel")) hypixelLevel = root.get("hypixelLevel").getAsInt();
         if (root.has("bedwarsLevel")) bedwarsLevel = root.get("bedwarsLevel").getAsInt();
         if (root.has("skywarsLevel")) skywarsLevel = root.get("skywarsLevel").getAsInt();
-        if (root.has("levelFormatted")) skywarsLevelFormatted = root.get("levelFormatted").getAsString();
+        if (root.has("levelFormatted")) skywarsLevelFormatted = root.get("levelFormattedWithBrackets").getAsString();
         if (root.has("uhcLevel")) uhcLevel = root.get("uhcLevel").getAsInt();
 
         return new PlayerStats(
