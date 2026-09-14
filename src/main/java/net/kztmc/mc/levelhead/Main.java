@@ -150,7 +150,7 @@ public class Main {
                 continue;
             }
 
-            if (Main.dev) LevelHeadCommand.send(mc.thePlayer, "QUEUE CHECK: " + info.getGameProfile().getName());
+//            if (Main.dev) LevelHeadCommand.send(mc.thePlayer, "QUEUE CHECK: " + info.getGameProfile().getName());
 
             CACHE.get(
                     info.getGameProfile().getId(),
@@ -261,26 +261,5 @@ public class Main {
         }
 
         return result.toString();
-    }
-
-    private char getVisibleChar(String text, int index) {
-        int visibleIndex = 0;
-
-        for (int i = 0; i < text.length(); i++) {
-            char c = text.charAt(i);
-
-            if (c == '§' && i + 1 < text.length()) {
-                i++;
-                continue;
-            }
-
-            if (visibleIndex == index) {
-                return c;
-            }
-
-            visibleIndex++;
-        }
-
-        return '\0';
     }
 }
