@@ -101,9 +101,9 @@ public class PlayerLevelRenderer {
         } else if (levelType == ModConfig.LevelType.BEDWARS){
             text = "§f" + "BWLevel: " + bwprestage;
         } else if (levelType == ModConfig.LevelType.SKYWARS) {
-            text = "§f" + "SWLevel: " + "§b" + stats.getSkywarsLevel() + "✫";
+            text = "§f" + "SWLevel: " + stats.getSkywarsLevelFormatted();
         } else if (levelType == ModConfig.LevelType.UHC) {
-            text = "§f" + "UHCLevel: " + "§c" + stats.getUhcLevel() + "✫";
+            text = "§f" + "UHCLevel: " + "§d" + stats.getUhcLevel() + "✫";
         }
 
         FontRenderer font = mc.fontRendererObj;

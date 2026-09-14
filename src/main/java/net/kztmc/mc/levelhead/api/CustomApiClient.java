@@ -97,12 +97,14 @@ public class CustomApiClient implements ApiClient {
         int hypixelLevel = 0;
         int bedwarsLevel = 0;
         int skywarsLevel = 0;
+        String skywarsLevelFormatted = "";
         int uhcLevel = 0;
 
         if (root.has("name")) name = root.get("name").getAsString();
         if (root.has("hypixelLevel")) hypixelLevel = root.get("hypixelLevel").getAsInt();
         if (root.has("bedwarsLevel")) bedwarsLevel = root.get("bedwarsLevel").getAsInt();
         if (root.has("skywarsLevel")) skywarsLevel = root.get("skywarsLevel").getAsInt();
+        if (root.has("levelFormatted")) skywarsLevelFormatted = root.get("levelFormatted").getAsString();
         if (root.has("uhcLevel")) uhcLevel = root.get("uhcLevel").getAsInt();
 
         return new PlayerStats(
@@ -110,6 +112,7 @@ public class CustomApiClient implements ApiClient {
                 hypixelLevel,
                 bedwarsLevel,
                 skywarsLevel,
+                skywarsLevelFormatted,
                 uhcLevel
         );
     }

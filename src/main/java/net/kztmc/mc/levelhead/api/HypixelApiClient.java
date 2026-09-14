@@ -126,6 +126,7 @@ public class HypixelApiClient implements ApiClient {
             int hypixelLevel = 0;
             int bedwarsLevel = 0;
             int skywarsLevel = 0;
+            String skywarsLevelFormatted = "";
             int uhcLevel = 0;
 
             ModConfig.LevelType levelType =
@@ -143,13 +144,22 @@ public class HypixelApiClient implements ApiClient {
                 }
 
             } else if (levelType == ModConfig.LevelType.SKYWARS) {
-                JsonObject stats = getObject(player, "stats");
-                JsonObject skywars = getObject(stats, "SkyWars");
+                /*
+                    JsonObject stats = getObject(player, "stats");
+                    JsonObject skywars = getObject(stats, "SkyWars");
 
-                if (skywars != null) {
-                    double experience = getDouble(skywars, "skywars_experience", 0.0D);
-                    skywarsLevel = getSkyWarsLevel(experience);
-                }
+                    if (skywars != null) {
+                        double experience = getDouble(
+                            skywars,
+                            "skywars_experience",
+                            0.0D
+                        );
+
+                        skywarsLevel = getSkyWarsLevel(experience);
+                    }
+                */
+
+                skywarsLevelFormatted = getString(player, "levelFormatted");
 
             } else if (levelType == ModConfig.LevelType.UHC) {
                 JsonObject stats = getObject(player, "stats");
@@ -167,6 +177,7 @@ public class HypixelApiClient implements ApiClient {
                             hypixelLevel,
                             bedwarsLevel,
                             skywarsLevel,
+                            skywarsLevelFormatted,
                             uhcLevel
                     );
 
