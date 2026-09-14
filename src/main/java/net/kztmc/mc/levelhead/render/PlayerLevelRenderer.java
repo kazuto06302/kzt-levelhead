@@ -89,10 +89,17 @@ public class PlayerLevelRenderer {
 
         ModConfig.LevelType levelType = Main.CONFIG.getLevelType();
 
+        int nwlv = stats.getHypixelLevel();
+        int bwlv = stats.getBedwarsLevel();
+        int swlv = stats.getSkywarsLevel();
+        int uhclv = stats.getUhcLevel();
+
+        String bwprestage = BedwarsPrestige.bedwarsPrestige(bwlv);
+
         if (levelType == ModConfig.LevelType.HYPIXEL) {
-            text = "§f" + "NetworkLevel: " + "§b" + stats.getHypixelLevel() + "§f";
+            text = "§f" + "NWLevel: " + "§b" + stats.getHypixelLevel() + "§f";
         } else if (levelType == ModConfig.LevelType.BEDWARS){
-            text = "§f" + "BWLevel: " + "§a" + stats.getBedwarsLevel() + "✫";
+            text = "§f" + "BWLevel: " + bwprestage;
         } else if (levelType == ModConfig.LevelType.SKYWARS) {
             text = "§f" + "SWLevel: " + "§b" + stats.getSkywarsLevel() + "✫";
         } else if (levelType == ModConfig.LevelType.UHC) {

@@ -108,7 +108,7 @@ public class LocalApiServer {
                 }
             }
 
-            /* /v2/player/<uuid> もサポート */
+            // /v2/player/<uuid>
             String path = exchange.getRequestURI().getPath();
             String prefix = "/v2/player/";
 
@@ -126,11 +126,7 @@ public class LocalApiServer {
         }
     }
 
-    private static void sendResponse(
-            HttpExchange exchange,
-            int status,
-            String response
-    ) throws IOException {
+    private static void sendResponse(HttpExchange exchange, int status, String response) throws IOException {
         byte[] bytes = response.getBytes("UTF-8");
 
         exchange.getResponseHeaders().set(
