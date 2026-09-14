@@ -144,10 +144,9 @@ public class HypixelApiClient implements ApiClient {
                 }
 
             } else if (levelType == ModConfig.LevelType.SKYWARS) {
+                JsonObject stats = getObject(player, "stats");
+                JsonObject skywars = getObject(stats, "SkyWars");
                 /*
-                    JsonObject stats = getObject(player, "stats");
-                    JsonObject skywars = getObject(stats, "SkyWars");
-
                     if (skywars != null) {
                         double experience = getDouble(
                             skywars,
@@ -159,7 +158,12 @@ public class HypixelApiClient implements ApiClient {
                     }
                 */
 
-                skywarsLevelFormatted = getString(player, "levelFormatted");
+                if (skywars != null) {
+                    skywarsLevelFormatted = getString(
+                            skywars,
+                            "levelFormatted"
+                    );
+                }
 
             } else if (levelType == ModConfig.LevelType.UHC) {
                 JsonObject stats = getObject(player, "stats");
