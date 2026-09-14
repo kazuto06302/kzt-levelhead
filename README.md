@@ -19,7 +19,7 @@ __取得可能な情報__
 __追加機能__  
 ・SeraphとのAPI競合対策
 （・ランクの同時表示 例: V, V+, M, M+, ++, NI, YT ）  
-（・スターのカラー化 ）  
+・スターのカラー化   
 （・スターブースター ）  
 （・カスタムプレフィックス ）  
 
@@ -29,5 +29,14 @@ __API__
 ・ポート3015でHypixelAPIの取得結果をそのままポート。
 ・標準6時間のキャッシュ機能により重複したAPI取得を防止、レート制限を対策。
 ・ingame中のみの表示でロビーのプレイヤーの不要な取得を防止。
+
+__コマンド__  
+/levelhead key <key> - Set Hypixel API key  
+/levelhead mode <hypixel|custom> §7- Change API mode  
+/levelhead api <url> - Set custom API URL  
+/levelhead clearcache - Clear cache  
+/levelhead reload - Reload configuration  
+/levelhead interval - Set requestInterval  
+/levelhead game - Set Gamemode  
 
 **Dev : Kazut0_@kztmc.net**

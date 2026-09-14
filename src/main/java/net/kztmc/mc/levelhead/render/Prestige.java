@@ -3,7 +3,6 @@ package net.kztmc.mc.levelhead.render;
 public class Prestige {
 
     public static String bedwarsPrestige(int level) {
-
         String prestige;
 
         if (level >= 5000) prestige = "§4%1§5%2§9%3§9%4§1✥";

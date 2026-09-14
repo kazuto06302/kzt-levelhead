@@ -28,10 +28,7 @@ public class LocalApiServer {
             server.setExecutor(Executors.newCachedThreadPool());
             server.start();
 
-            System.out.println(
-                    "[LevelHead] Local API server started on "
-                            + HOST + ":" + PORT
-            );
+            System.out.println("[LevelHead] Local API server started on http://" + HOST + ":" + PORT);
         } catch (IOException e) {
             System.err.println("[LevelHead] Failed to start local API server");
             e.printStackTrace();

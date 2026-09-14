@@ -326,9 +326,6 @@ public class PlayerStatsCache {
 
             /*
              * APIのRateLimitを確認。
-             *
-             * 4 Worker全員がここを通るため、
-             * RateLimit制御はWorker間で共有される。
              */
             awaitRequestPermit();
 
@@ -451,8 +448,6 @@ public class PlayerStatsCache {
             }
 
         } catch (Exception e) {
-
-
             /*
              * ==========================================
              * HTTP 429
@@ -504,16 +499,13 @@ public class PlayerStatsCache {
              * 通常のエラー。
              */
             synchronized (this) {
-
                 if (requests.get(request.uuid) == request) {
                     requests.remove(request.uuid);
                     inFlight.remove(request.uuid);
                 }
             }
 
-
             System.err.println("[LevelHead] Failed to fetch" + request.uuid);
-
             e.printStackTrace();
 
             Set<Callback> callbacks;
@@ -522,9 +514,7 @@ public class PlayerStatsCache {
                 callbacks = new HashSet<Callback>(request.callbacks);
             }
 
-
             for (Callback callback : callbacks) {
-
                 try {
                     callback.onFailure(request.uuid, e);
                 } catch (Exception callbackException) {
@@ -534,38 +524,31 @@ public class PlayerStatsCache {
         }
     }
 
-
     /*
      * ==========================================
      * RateLimit情報更新
      * ==========================================
      */
     private synchronized void updateRateLimit(ApiClient.ApiResponse response) {
-
         int limit = response.getRateLimitLimit();
         int remaining = response.getRateLimitRemaining();
         long reset = response.getRateLimitReset();
 
 
         if (limit >= 0) rateLimitLimit = limit;
-
         if (remaining >= 0) rateLimitRemaining = remaining;
-
         if (reset >= 0) rateLimitReset = reset;
-
 
         /*
          * Remainingが0なら、
          * Resetまで待機する。
          */
         if (rateLimitRemaining == 0 && rateLimitReset > 0) {
-
             /*
              * HypixelのRateLimit-Resetは
              * 「次のリセットまでの秒数」。
              */
             long resetMillis = rateLimitReset * 1000L;
-
 
             rateLimitUntil =
                     Math.max(
@@ -584,9 +567,7 @@ public class PlayerStatsCache {
     private void awaitRequestPermit() {
 
         synchronized (this) {
-
             while (running) {
-
                 long now = System.currentTimeMillis();
 
                 /*
@@ -599,12 +580,7 @@ public class PlayerStatsCache {
                  */
                 long intervalRemaining = nextRequestAt - now;
 
-
-                long waitTime =
-                        Math.max(
-                                rateLimitRemainingTime,
-                                intervalRemaining
-                        );
+                long waitTime = Math.max(rateLimitRemainingTime, intervalRemaining);
 
                 /*
                  * RateLimit情報がある場合、
@@ -626,7 +602,6 @@ public class PlayerStatsCache {
 
                     return;
                 }
-
 
                 try {
                     wait(waitTime);
@@ -652,7 +627,6 @@ public class PlayerStatsCache {
             return getConfiguredRequestInterval();
         }
 
-
         /*
          * 残量が十分にある場合。
          *
@@ -670,7 +644,6 @@ public class PlayerStatsCache {
         if (rateLimitRemaining > 0) {
             return LOW_RATE_LIMIT_INTERVAL;
         }
-
 
         /*
          * Remaining = 0。
@@ -690,7 +663,6 @@ public class PlayerStatsCache {
     private long getConfiguredRequestInterval() {
 
         long interval = Main.CONFIG.getRequestInterval();
-
 
         if (interval <= 0) {
             return FALLBACK_REQUEST_INTERVAL;

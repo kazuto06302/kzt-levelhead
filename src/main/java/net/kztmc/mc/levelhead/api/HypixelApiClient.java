@@ -288,21 +288,22 @@ public class HypixelApiClient implements ApiClient {
         return (int) Math.floor(Math.sqrt(networkExp / 1250.0D + 12.25D) - 3.5D) + 1;
     }
 
-    private int getSkyWarsLevel(double experience) {
-        if (experience < 20) return 1;
-        if (experience < 70) return 2;
-        if (experience < 150) return 3;
-        if (experience < 250) return 4;
-        if (experience < 500) return 5;
-        if (experience < 1000) return 6;
-        if (experience < 2000) return 7;
-        if (experience < 3500) return 8;
-        if (experience < 6000) return 9;
-        if (experience < 10000) return 10;
-        if (experience < 15000) return 11;
-
-        return 12 + (int) Math.floor((experience - 15000) / 10000.0D);
-    }
+    // change experience -> skywarslevelformatted
+//    private int getSkyWarsLevel(double experience) {
+//        if (experience < 20) return 1;
+//        if (experience < 70) return 2;
+//        if (experience < 150) return 3;
+//        if (experience < 250) return 4;
+//        if (experience < 500) return 5;
+//        if (experience < 1000) return 6;
+//        if (experience < 2000) return 7;
+//        if (experience < 3500) return 8;
+//        if (experience < 6000) return 9;
+//        if (experience < 10000) return 10;
+//        if (experience < 15000) return 11;
+//
+//        return 12 + (int) Math.floor((experience - 15000) / 10000.0D);
+//    }
 
     private int getUhcLevel(int score) {
         if (score < 10) return 1;

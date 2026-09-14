@@ -91,7 +91,7 @@ public class PlayerLevelRenderer {
 
         int nwlv = stats.getHypixelLevel();
         int bwlv = stats.getBedwarsLevel();
-        int swlv = stats.getSkywarsLevel();
+        // int swlv = stats.getSkywarsLevel();
         int uhclv = stats.getUhcLevel();
 
         String bwprestage = Prestige.bedwarsPrestige(bwlv);
@@ -101,7 +101,7 @@ public class PlayerLevelRenderer {
                 .replace("]","");
 
         if (levelType == ModConfig.LevelType.HYPIXEL) {
-            text = "§f" + "NWLevel: " + "§e" + stats.getHypixelLevel() + "§f";
+            text = "§f" + "NWLevel: " + "§e" + nwlv + "§f";
         } else if (levelType == ModConfig.LevelType.BEDWARS){
             text = "§f" + "BWLevel: " + bwprestage;
         } else if (levelType == ModConfig.LevelType.SKYWARS) {
@@ -129,7 +129,6 @@ public class PlayerLevelRenderer {
         }
 
         GL11.glPushMatrix();
-
         GL11.glTranslatef((float) x, (float) y + yOffset, (float) z);
 
         GL11.glRotatef(

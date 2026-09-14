@@ -2,11 +2,8 @@ package net.kztmc.mc.levelhead.api;
 
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
-import net.kztmc.mc.levelhead.Main;
 import net.kztmc.mc.levelhead.cache.PlayerStats;
-import net.kztmc.mc.levelhead.command.LevelHeadCommand;
 import net.kztmc.mc.levelhead.config.ModConfig;
-import net.minecraft.client.Minecraft;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;

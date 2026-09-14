@@ -6,10 +6,7 @@ public class CachedPlayerData {
     private final String rawJson;
     private final long fetchedAt;
 
-    public CachedPlayerData(
-            PlayerStats stats,
-            String rawJson
-    ) {
+    public CachedPlayerData(PlayerStats stats, String rawJson) {
         this.stats = stats;
         this.rawJson = rawJson;
         this.fetchedAt = System.currentTimeMillis();
