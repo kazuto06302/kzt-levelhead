@@ -1,6 +1,6 @@
 package net.kztmc.mc.levelhead.render;
 
-public class BedwarsPrestige {
+public class Prestige {
 
     public static String bedwarsPrestige(int level) {
 
@@ -63,5 +63,20 @@ public class BedwarsPrestige {
         if (level >= 10) return "§7%1§7%2§7✫";
 
         return "§7%1✫";
+    }
+
+    public static String uhcPrestige(int level) {
+
+        if (level >= 10) return "§4§l" + level + "§r§4✫";
+        if (level >= 9) return "§4" + level + "§r§4✫";
+        if (level >= 8) return "§4" + level + "§r§4✫";
+        if (level >= 7) return "§6" + level + "§r§6✫";
+        if (level >= 6) return "§6" + level + "§r§6✫";
+        if (level >= 5) return "§6" + level + "§r§6✫";
+        if (level >= 4) return "§f" + level + "§r§f✫";
+        if (level >= 3) return "§f" + level + "§r§f✫";
+        if (level >= 2) return "§7" + level + "§r§7✫";
+
+        return "§7" + level + "§r§7✫";
     }
 }
