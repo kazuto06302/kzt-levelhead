@@ -134,7 +134,7 @@ public class Main {
 
         int playerCount = players.size();
 
-        selfQueueAssignmentAllowed = isHypixelLineAllowed();
+        selfQueueAssignmentAllowed = true;
         if (Main.dev) LevelHeadCommand.send(mc.thePlayer, "CT");
 
         if (selfQueueAssignmentAllowed) {
@@ -195,53 +195,6 @@ public class Main {
         tabCheckTimer = 0;
     }
 
-    private boolean isHypixelLineAllowed() {
-        if (mc.theWorld == null) return false;
-
-        Scoreboard scoreboard = mc.theWorld.getScoreboard();
-        if (scoreboard == null) return false;
-
-        ScoreObjective objective = scoreboard.getObjectiveInDisplaySlot(1);
-        if (objective == null) return false;
-
-        List<Score> scores =
-                new ArrayList<Score>(scoreboard.getSortedScores(objective));
-
-        List<String> lines = new ArrayList<String>();
-
-        for (Score score : scores) {
-            if (score.getPlayerName().startsWith("#")) {
-                continue;
-            }
-
-            String line = ScorePlayerTeam.formatPlayerName(
-                    scoreboard.getPlayersTeam(score.getPlayerName()),
-                    score.getPlayerName()
-            );
-
-            lines.add(line);
-        }
-
-        if (lines.isEmpty()) return false;
-
-        for (String line : lines) {
-            String clean = removeFormattingCodes(line);
-
-            if (Main.dev) {
-                LevelHeadCommand.send(
-                        mc.thePlayer,
-                        "SCORE: [" + clean + "]"
-                );
-            }
-
-            if ("www.hypixel.net".equals(clean)) {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
     private boolean isQueueAssignmentAllowed() {
         if (Main.dev) LevelHeadCommand.send(mc.thePlayer, "QUEUE CHECKING");
 
@@ -271,32 +224,13 @@ public class Main {
 
         if (lines.isEmpty()) return false;
 
-//        log export scoreboard
-//        if (Main.dev) {
-//            for (int i = 0; i < lines.size(); i++) {
-//                LevelHeadCommand.send(
-//                        mc.thePlayer,
-//                        i + ": " + lines.get(i)
-//                );
-//            }
-//
-//            String topLine = lines.get(lines.size() - 1);
-//
-//            LevelHeadCommand.send(
-//                    mc.thePlayer,
-//                    "TOP: " + topLine
-//            );
-//
-//            LevelHeadCommand.send(
-//                    mc.thePlayer,
-//                    "DATE/M CHECK: " + isDateAndMLine(topLine)
-//            );
-//        }
-
         String firstLine = lines.get(lines.size() - 1);
-
         if (!isDateAndMLine(firstLine)) return false;
-        if (!isHypixelLineAllowed()) return false;
+
+        String lastLine = lines.get(0);
+        String cleanLastLine = removeFormattingCodes(lastLine);
+
+        if (!"www.hypixel.net".equals(cleanLastLine)) return false;
 
         if (Main.dev) LevelHeadCommand.send(mc.thePlayer, "QUEUE ALLOWED");
 
