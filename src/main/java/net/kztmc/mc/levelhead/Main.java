@@ -135,7 +135,21 @@ public class Main {
         int playerCount = players.size();
 
         selfQueueAssignmentAllowed = isHypixel();
+
+        if (Main.dev) {
+            LevelHeadCommand.send(
+                    mc.thePlayer,
+                    "SELF: " + selfQueueAssignmentAllowed
+            );
+        }
+
         if (selfQueueAssignmentAllowed) {
+            if (Main.dev) {
+                LevelHeadCommand.send(
+                        mc.thePlayer,
+                        "SELF CACHE GET"
+                );
+            }
             CACHE.get(
                     mc.thePlayer.getUniqueID(),
                     PlayerStatsCache.Priority.HIGH
@@ -276,6 +290,13 @@ public class Main {
         String cleanLastLine = removeFormattingCodes(lastLine);
 
         String normalized = cleanLastLine.replace("?", "");
+
+        if (Main.dev) {
+            LevelHeadCommand.send(
+                    mc.thePlayer,
+                    "LastLine: " + cleanLastLine + ", normalized: " + normalized
+            );
+        }
 
         return "www.hypixel.net".equals(normalized);
     }

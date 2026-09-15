@@ -17,7 +17,7 @@ __取得可能な情報__
 ・UHCレベル   
 
 __追加機能__  
-・SeraphとのAPI競合対策
+・SeraphとのAPI競合対策  
 （・ランクの同時表示 例: V, V+, M, M+, ++, NI, YT ）  
 ・スターのカラー化   
 （・スターブースター ）  
@@ -26,13 +26,13 @@ __追加機能__
 __API__  
 ・Seraphとの競合によりAPI Limitの制限を、  
 　APIのセルフホストとSeraphの機能「Custom Hypixel Proxy」で実現  
-・ポート3015でHypixelAPIの取得結果をそのままポート。
-・標準6時間のキャッシュ機能により重複したAPI取得を防止、レート制限を対策。
+・ポート3015でHypixelAPIの取得結果をそのままポート。  
+・標準6時間のキャッシュ機能により重複したAPI取得を防止、レート制限を対策。  
 ・ingame中のみの表示でロビーのプレイヤーの不要な取得を防止。
 
 __コマンド__  
 /levelhead key <key> - Set Hypixel API key  
-/levelhead mode <hypixel|custom> §7- Change API mode  
+/levelhead mode <hypixel|custom> - Change API mode  
 /levelhead api <url> - Set custom API URL  
 /levelhead clearcache - Clear cache  
 /levelhead reload - Reload configuration  
