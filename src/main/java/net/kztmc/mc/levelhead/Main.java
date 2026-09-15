@@ -50,7 +50,6 @@ public class Main {
     private int tabCheckTimer = 0;
 
     private static volatile boolean queueAssignmentAllowed = false;
-    private static volatile boolean selfQueueAssignmentAllowed = false;
 
     public static boolean dev = false;
 
@@ -116,7 +115,6 @@ public class Main {
 
         if (mc.theWorld == null || mc.thePlayer == null) {
             queueAssignmentAllowed = false;
-            selfQueueAssignmentAllowed = false;
             return;
         }
 
@@ -126,55 +124,33 @@ public class Main {
 
         tabCheckTimer = 0;
         queueAssignmentAllowed = false;
-        selfQueueAssignmentAllowed = false;
 
         if (mc.getNetHandler() == null) return;
 
         Collection<NetworkPlayerInfo> players = mc.getNetHandler().getPlayerInfoMap();
 
         int playerCount = players.size();
-
-        selfQueueAssignmentAllowed = isHypixel();
-
-        if (Main.dev) {
-            LevelHeadCommand.send(
-                    mc.thePlayer,
-                    "SELF: " + selfQueueAssignmentAllowed
-            );
-        }
-
-        if (selfQueueAssignmentAllowed) {
-            if (Main.dev) {
-                LevelHeadCommand.send(
-                        mc.thePlayer,
-                        "SELF CACHE GET"
-                );
-            }
-            CACHE.get(
-                    mc.thePlayer.getUniqueID(),
-                    PlayerStatsCache.Priority.HIGH
-            );
-        }
-
         if (playerCount >= 24) return;
 
         queueAssignmentAllowed = isQueueAssignmentAllowed();
+
         if (!queueAssignmentAllowed) return;
 
         for (NetworkPlayerInfo info : players) {
             if (info == null || info.getGameProfile() == null) continue;
 
-            //myself
-            if (info.getGameProfile().getId().equals(mc.thePlayer.getUniqueID())) continue;
-
             String displayName = info.getPlayerTeam() == null
                     ? info.getGameProfile().getName()
                     : ScorePlayerTeam.formatPlayerName(
-                        info.getPlayerTeam(),
-                        info.getGameProfile().getName()
+                    info.getPlayerTeam(),
+                    info.getGameProfile().getName()
             );
 
-            if (displayName.contains("§k")) continue;
+            if (displayName.contains("§k")) {
+                continue;
+            }
+
+            //if (Main.dev) LevelHeadCommand.send(mc.thePlayer, "QUEUE CHECK: " + info.getGameProfile().getName());
 
             CACHE.get(
                     info.getGameProfile().getId(),
@@ -196,34 +172,21 @@ public class Main {
         }
 
         queueAssignmentAllowed = false;
-        selfQueueAssignmentAllowed = false;
         tabCheckTimer = 0;
     }
 
     private boolean isQueueAssignmentAllowed() {
         if (Main.dev) LevelHeadCommand.send(mc.thePlayer, "QUEUE CHECKING");
 
-        if (mc.theWorld == null) {
-            if (Main.dev) LevelHeadCommand.send(mc.thePlayer, "FAIL: WORLD");
-            return false;
-        }
+        if (mc.theWorld == null) return false;
 
         Scoreboard scoreboard = mc.theWorld.getScoreboard();
-        if (scoreboard == null) {
-            if (Main.dev) LevelHeadCommand.send(mc.thePlayer, "FAIL: SCOREBOARD");
-            return false;
-        }
+        if (scoreboard == null) return false;
 
         ScoreObjective objective = scoreboard.getObjectiveInDisplaySlot(1);
-        if (objective == null) {
-            if (Main.dev) LevelHeadCommand.send(mc.thePlayer, "FAIL: OBJECTIVE");
-            return false;
-        }
+        if (objective == null) return false;
 
-        List<Score> scores = new ArrayList<Score>(
-                scoreboard.getSortedScores(objective)
-        );
-
+        List<Score> scores = new ArrayList<Score>(scoreboard.getSortedScores(objective));
         List<String> lines = new ArrayList<String>();
 
         for (Score score : scores) {
@@ -239,86 +202,19 @@ public class Main {
             lines.add(line);
         }
 
-        if (lines.isEmpty()) {
-            if (Main.dev) LevelHeadCommand.send(mc.thePlayer, "FAIL: EMPTY");
-            return false;
-        }
+        if (lines.isEmpty()) return false;
 
         String firstLine = lines.get(lines.size() - 1);
+        if (!isDateAndMLine(firstLine)) return false;
 
-        if (Main.dev) LevelHeadCommand.send(mc.thePlayer, "FIRST: " + removeFormattingCodes(firstLine));
+        String lastLine = lines.get(0);
+        String cleanLastLine = removeFormattingCodes(lastLine);
 
-        if (!isDateAndMLine(firstLine)) {
-            if (Main.dev) LevelHeadCommand.send(mc.thePlayer, "FAIL: DATE/M");
-            return false;
-        }
+        if (!"www.hypixel.net".equals(cleanLastLine)) return false;
 
         if (Main.dev) LevelHeadCommand.send(mc.thePlayer, "QUEUE ALLOWED");
 
         return true;
-    }
-
-    private boolean isHypixel() {
-        if (mc.theWorld == null) return false;
-
-        Scoreboard scoreboard = mc.theWorld.getScoreboard();
-        if (scoreboard == null) return false;
-
-        ScoreObjective objective = scoreboard.getObjectiveInDisplaySlot(1);
-        if (objective == null) return false;
-
-        List<Score> scores = new ArrayList<Score>(
-                scoreboard.getSortedScores(objective)
-        );
-
-        for (Score score : scores) {
-            if (score.getPlayerName().startsWith("#")) continue;
-
-            String line = ScorePlayerTeam.formatPlayerName(
-                    scoreboard.getPlayersTeam(score.getPlayerName()),
-                    score.getPlayerName()
-            );
-
-            String cleanLine = removeFormattingCodes(line).trim();
-
-            // デバッグ
-            if (Main.dev) {
-                LevelHeadCommand.send(
-                        mc.thePlayer,
-                        "RAW: [" + line + "]"
-                );
-
-                LevelHeadCommand.send(
-                        mc.thePlayer,
-                        "CLEAN: [" + cleanLine + "]"
-                );
-            }
-
-            // www.hypixel.net を含んでいるかで判定
-            if (cleanLine.contains("www.hypixel.net")) {
-                if (Main.dev) {
-                    LevelHeadCommand.send(
-                            mc.thePlayer,
-                            "HYPixel FOUND!"
-                    );
-                }
-
-                return true;
-            }
-        }
-
-        if (Main.dev) {
-            LevelHeadCommand.send(
-                    mc.thePlayer,
-                    "HYPixel NOT FOUND"
-            );
-        }
-
-        return false;
-    }
-
-    public static boolean isSelfQueueAssignmentAllowedCached() {
-        return selfQueueAssignmentAllowed;
     }
 
     private boolean isDateAndMLine(String text) {
