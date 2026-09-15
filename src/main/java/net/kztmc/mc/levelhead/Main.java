@@ -189,6 +189,7 @@ public class Main {
         }
 
         queueAssignmentAllowed = false;
+        selfQueueAssignmentAllowed = false;
         tabCheckTimer = 0;
     }
 
