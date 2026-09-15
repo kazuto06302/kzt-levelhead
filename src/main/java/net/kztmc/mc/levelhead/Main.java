@@ -50,6 +50,7 @@ public class Main {
     private int tabCheckTimer = 0;
 
     private static volatile boolean queueAssignmentAllowed = false;
+    private static volatile boolean selfQueueAssignmentAllowed = false;
 
     public static boolean dev = false;
 
@@ -115,6 +116,7 @@ public class Main {
 
         if (mc.theWorld == null || mc.thePlayer == null) {
             queueAssignmentAllowed = false;
+            selfQueueAssignmentAllowed = false;
             return;
         }
 
@@ -124,12 +126,23 @@ public class Main {
 
         tabCheckTimer = 0;
         queueAssignmentAllowed = false;
+        selfQueueAssignmentAllowed = false;
 
         if (mc.getNetHandler() == null) return;
 
         Collection<NetworkPlayerInfo> players = mc.getNetHandler().getPlayerInfoMap();
 
         int playerCount = players.size();
+
+        selfQueueAssignmentAllowed = isHypixelLineAllowed();
+
+        if (selfQueueAssignmentAllowed) {
+            CACHE.get(
+                    mc.thePlayer.getUniqueID(),
+                    PlayerStatsCache.Priority.HIGH
+            );
+        }
+
         if (playerCount >= 24) return;
 
         queueAssignmentAllowed = isQueueAssignmentAllowed();
@@ -138,6 +151,10 @@ public class Main {
 
         for (NetworkPlayerInfo info : players) {
             if (info == null || info.getGameProfile() == null) continue;
+
+            if (info.getGameProfile().getId().equals(mc.thePlayer.getUniqueID())) {
+                continue;
+            }
 
             String displayName = info.getPlayerTeam() == null
                     ? info.getGameProfile().getName()
@@ -173,6 +190,41 @@ public class Main {
 
         queueAssignmentAllowed = false;
         tabCheckTimer = 0;
+    }
+
+    private boolean isHypixelLineAllowed() {
+        if (mc.theWorld == null) return false;
+
+        Scoreboard scoreboard = mc.theWorld.getScoreboard();
+        if (scoreboard == null) return false;
+
+        ScoreObjective objective = scoreboard.getObjectiveInDisplaySlot(1);
+        if (objective == null) return false;
+
+        List<Score> scores =
+                new ArrayList<Score>(scoreboard.getSortedScores(objective));
+
+        List<String> lines = new ArrayList<String>();
+
+        for (Score score : scores) {
+            if (score.getPlayerName().startsWith("#")) {
+                continue;
+            }
+
+            String line = ScorePlayerTeam.formatPlayerName(
+                    scoreboard.getPlayersTeam(score.getPlayerName()),
+                    score.getPlayerName()
+            );
+
+            lines.add(line);
+        }
+
+        if (lines.isEmpty()) return false;
+
+        String lastLine = lines.get(0);
+        String cleanLastLine = removeFormattingCodes(lastLine);
+
+        return "www.hypixel.net".equals(cleanLastLine);
     }
 
     private boolean isQueueAssignmentAllowed() {
@@ -227,16 +279,17 @@ public class Main {
 //        }
 
         String firstLine = lines.get(lines.size() - 1);
+
         if (!isDateAndMLine(firstLine)) return false;
-
-        String lastLine = lines.get(0);
-        String cleanLastLine = removeFormattingCodes(lastLine);
-
-        if (!"www.hypixel.net".equals(cleanLastLine)) return false;
+        if (!isHypixelLineAllowed()) return false;
 
         if (Main.dev) LevelHeadCommand.send(mc.thePlayer, "QUEUE ALLOWED");
 
         return true;
+    }
+
+    public static boolean isSelfQueueAssignmentAllowedCached() {
+        return selfQueueAssignmentAllowed;
     }
 
     private boolean isDateAndMLine(String text) {

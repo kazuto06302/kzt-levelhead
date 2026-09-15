@@ -39,7 +39,13 @@ public class PlayerLevelRenderer {
 
             PlayerStats stats;
 
-            if (Main.isQueueAssignmentAllowedCached()) {
+            boolean isSelf = player == mc.thePlayer;
+
+            boolean liveAllowed = isSelf
+                    ? Main.isSelfQueueAssignmentAllowedCached()
+                    : Main.isQueueAssignmentAllowedCached();
+
+            if (liveAllowed) {
                 //ingame
 
                 PlayerStatsCache.Priority priority;
