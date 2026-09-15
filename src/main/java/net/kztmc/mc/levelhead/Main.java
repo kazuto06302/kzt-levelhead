@@ -271,8 +271,6 @@ public class Main {
                 scoreboard.getSortedScores(objective)
         );
 
-        List<String> lines = new ArrayList<String>();
-
         for (Score score : scores) {
             if (score.getPlayerName().startsWith("#")) continue;
 
@@ -281,24 +279,21 @@ public class Main {
                     score.getPlayerName()
             );
 
-            lines.add(line);
+            String cleanLine = removeFormattingCodes(line).trim();
+
+            if (Main.dev) {
+                LevelHeadCommand.send(
+                        mc.thePlayer,
+                        "LINE: [" + cleanLine + "]"
+                );
+            }
+
+            if ("www.hypixel.net".equals(cleanLine)) {
+                return true;
+            }
         }
 
-        if (lines.isEmpty()) return false;
-
-        String lastLine = lines.get(0);
-        String cleanLastLine = removeFormattingCodes(lastLine);
-
-        String normalized = cleanLastLine.replace("?", "");
-
-        if (Main.dev) {
-            LevelHeadCommand.send(
-                    mc.thePlayer,
-                    "LastLine: " + cleanLastLine + ", normalized: " + normalized
-            );
-        }
-
-        return "www.hypixel.net".equals(normalized);
+        return false;
     }
 
     public static boolean isSelfQueueAssignmentAllowedCached() {
