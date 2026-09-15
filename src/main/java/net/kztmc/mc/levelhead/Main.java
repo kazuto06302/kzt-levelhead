@@ -281,16 +281,37 @@ public class Main {
 
             String cleanLine = removeFormattingCodes(line).trim();
 
+            // デバッグ
             if (Main.dev) {
                 LevelHeadCommand.send(
                         mc.thePlayer,
-                        "LINE: [" + cleanLine + "]"
+                        "RAW: [" + line + "]"
+                );
+
+                LevelHeadCommand.send(
+                        mc.thePlayer,
+                        "CLEAN: [" + cleanLine + "]"
                 );
             }
 
-            if ("www.hypixel.net".equals(cleanLine)) {
+            // www.hypixel.net を含んでいるかで判定
+            if (cleanLine.contains("www.hypixel.net")) {
+                if (Main.dev) {
+                    LevelHeadCommand.send(
+                            mc.thePlayer,
+                            "HYPixel FOUND!"
+                    );
+                }
+
                 return true;
             }
+        }
+
+        if (Main.dev) {
+            LevelHeadCommand.send(
+                    mc.thePlayer,
+                    "HYPixel NOT FOUND"
+            );
         }
 
         return false;
