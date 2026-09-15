@@ -183,15 +183,12 @@ public class PlayerStatsCache {
 
         CachedPlayerData cached = cache.get(uuid);
 
-
         if (cached == null) {
             enqueue(uuid, priority, null);
             return null;
         }
 
-
         long age = System.currentTimeMillis() - cached.getFetchedAt();
-
 
         if (age > config.getCacheDurationMillis()) {
             enqueue(uuid, priority, null);

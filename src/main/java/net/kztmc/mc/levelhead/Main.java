@@ -135,8 +135,10 @@ public class Main {
         int playerCount = players.size();
 
         selfQueueAssignmentAllowed = isHypixelLineAllowed();
+        if (Main.dev) LevelHeadCommand.send(mc.thePlayer, "CT");
 
         if (selfQueueAssignmentAllowed) {
+            if (Main.dev) LevelHeadCommand.send(mc.thePlayer, "SQAA");
             CACHE.get(
                     mc.thePlayer.getUniqueID(),
                     PlayerStatsCache.Priority.HIGH
@@ -222,10 +224,22 @@ public class Main {
 
         if (lines.isEmpty()) return false;
 
-        String lastLine = lines.get(0);
-        String cleanLastLine = removeFormattingCodes(lastLine);
+        for (String line : lines) {
+            String clean = removeFormattingCodes(line);
 
-        return "www.hypixel.net".equals(cleanLastLine);
+            if (Main.dev) {
+                LevelHeadCommand.send(
+                        mc.thePlayer,
+                        "SCORE: [" + clean + "]"
+                );
+            }
+
+            if ("www.hypixel.net".equals(clean)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private boolean isQueueAssignmentAllowed() {
