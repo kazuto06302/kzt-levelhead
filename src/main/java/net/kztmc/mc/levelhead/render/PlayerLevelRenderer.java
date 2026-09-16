@@ -6,11 +6,13 @@ import net.kztmc.mc.levelhead.cache.PlayerStatsCache;
 import net.kztmc.mc.levelhead.config.ModConfig;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.FontRenderer;
+import net.minecraft.client.network.NetworkPlayerInfo;
 import net.minecraft.client.renderer.GlStateManager;
 import net.minecraft.client.renderer.Tessellator;
 import net.minecraft.client.renderer.WorldRenderer;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.scoreboard.ScoreObjective;
+import net.minecraft.scoreboard.ScorePlayerTeam;
 import net.minecraftforge.client.event.RenderWorldLastEvent;
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
 import org.lwjgl.opengl.GL11;
@@ -33,13 +35,22 @@ public class PlayerLevelRenderer {
 
             if (player == mc.thePlayer && mc.gameSettings.thirdPersonView == 0) continue;
 
+            // 表示名が難読化(§k)されている間はAPIリクエストを出さない
+            if (hasObfuscatedName(player)) continue;
+
             float distance = player.getDistanceToEntity(mc.thePlayer);
 
             if (distance > 64.0F) continue;
 
             PlayerStats stats;
 
-            if (Main.isQueueAssignmentAllowedCached()) {
+            // 自分自身はfooter(www.hypixel.net)判定のみで表示を許可する。
+            // 他プレイヤーはdate/M行も含めた厳密な判定(queueAssignmentAllowed)を使う。
+            boolean allowed = (player == mc.thePlayer)
+                    ? Main.isOnHypixelNetworkCached()
+                    : Main.isQueueAssignmentAllowedCached();
+
+            if (allowed) {
                 //ingame
 
                 PlayerStatsCache.Priority priority;
@@ -67,6 +78,7 @@ public class PlayerLevelRenderer {
             }
 
             if (stats == null) continue;
+
 
             double x = player.lastTickPosX
                     + (player.posX - player.lastTickPosX) * event.partialTicks
@@ -181,6 +193,26 @@ public class PlayerLevelRenderer {
         GL11.glEnable(GL11.GL_LIGHTING);
 
         GL11.glPopMatrix();
+    }
+
+    /*
+     * TabListの表示名に§k(難読化)が含まれている場合は
+     * APIリクエスト自体を出さない。
+     */
+    private boolean hasObfuscatedName(EntityPlayer player) {
+        if (mc.getNetHandler() == null) return false;
+
+        NetworkPlayerInfo info = mc.getNetHandler().getPlayerInfo(player.getUniqueID());
+        if (info == null || info.getGameProfile() == null) return false;
+
+        String displayName = info.getPlayerTeam() == null
+                ? info.getGameProfile().getName()
+                : ScorePlayerTeam.formatPlayerName(
+                info.getPlayerTeam(),
+                info.getGameProfile().getName()
+        );
+
+        return displayName != null && displayName.contains("§k");
     }
 
     private boolean hasBelowNameObjective(EntityPlayer player) {
