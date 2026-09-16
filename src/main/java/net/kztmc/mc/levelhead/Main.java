@@ -189,15 +189,7 @@ public class Main {
     @SubscribeEvent
     public void onPlayerLoggedOut(PlayerEvent.PlayerLoggedOutEvent event) {
         if (event.player == null) return;
-
-        // ここでCACHE.remove()すると、キャッシュ済みの正常なスタッツまで
-        // 消えてしまう。BedWars等ではプレイヤーが脱落/観戦状態になる際に
-        // このイベントが発火することがあり、そのたびにキャッシュを消すと
-        // (Seraph等の外部連携先から見て)少し時間が経った頃に
-        // 「取得できていたはずのスタッツが急にERR表示になる」原因になる。
-        // 進行中のリクエストだけキャンセルし、キャッシュ自体は保持する
-        // (メモリ上限はtrimCache()の通常のLRU管理に任せる)。
-        CACHE.cancelPending(event.player.getUniqueID());
+        CACHE.remove(event.player.getUniqueID());
     }
 
     @SubscribeEvent

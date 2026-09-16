@@ -103,7 +103,7 @@ public class PlayerLevelRenderer {
 
         int nwlv = stats.getHypixelLevel();
         int bwlv = stats.getBedwarsLevel();
-        // int swlv = stats.getSkywarsLevel();
+        int swlv = stats.getSkywarsLevel();
         int uhclv = stats.getUhcLevel();
 
         String bwprestage = Prestige.bedwarsPrestige(bwlv);

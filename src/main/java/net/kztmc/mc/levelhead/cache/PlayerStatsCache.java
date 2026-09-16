@@ -152,16 +152,16 @@ public class PlayerStatsCache {
             final int workerId = i + 1;
 
             workers[i] = new Thread(
-                    new Runnable() {
+                            new Runnable() {
 
-                        @Override
-                        public void run() {
-                            processQueue();
-                        }
-                    },
+                                @Override
+                                public void run() {
+                                    processQueue();
+                                }
+                            },
 
-                    "LevelHead-API-Worker-" + workerId
-            );
+                            "LevelHead-API-Worker-" + workerId
+                    );
 
 
             /*
@@ -701,7 +701,6 @@ public class PlayerStatsCache {
      * ==========================================
      */
     public synchronized void clear() {
-
         cache.clear();
         queue.clear();
         pending.clear();
@@ -724,28 +723,6 @@ public class PlayerStatsCache {
 
     public synchronized void remove(UUID uuid) {
         cache.remove(uuid);
-        Request request = requests.remove(uuid);
-
-        if (request != null) {
-            queue.remove(request);
-        }
-
-        pending.remove(uuid);
-        inFlight.remove(uuid);
-    }
-
-
-    /*
-     * ==========================================
-     * 進行中/予定されているリクエストのみキャンセル
-     * ==========================================
-     * cache内の既存データは消さない。
-     * (BedWarsの脱落/観戦状態などでPlayerLoggedOutEventが
-     *  発火した際に、正常なキャッシュ済みスタッツまで
-     *  消してしまうと、外部連携(Seraph等)から見て
-     *  少し時間が経った頃に急にERR表示になる原因になるため)
-     */
-    public synchronized void cancelPending(UUID uuid) {
         Request request = requests.remove(uuid);
 
         if (request != null) {
