@@ -191,16 +191,110 @@ public class LevelHeadCommand extends CommandBase {
         send(sender, "Custom API URL saved.");
     }
 
-    private void changePrefix(ICommandSender sender, String[] args) {
+    private static final int MAX_PREFIX_LENGTH = 32;
 
-        if (args.length < 3) {
-            send(sender, "Usage: /levelhead changeprefix <hypixel|bedwars|skywars|uhc> <prefix>");
+    private void changePrefix(ICommandSender sender, String[] args) {
+        if (args.length < 2) {
+            send(sender, "Current[HYPIXEL]: " + Main.CONFIG.getHypixelPrefix());
+            send(sender, "Current[BEDWARS]: " + Main.CONFIG.getBedwarsPrefix());
+            send(sender, "Current[SKYWARS]: " + Main.CONFIG.getSkywarsPrefix());
+            send(sender, "Current[UHC]: " + Main.CONFIG.getUhcPrefix());
             return;
         }
 
         String game = args[1].toLowerCase();
-        String prefix = args[2];
 
+        // /levelhead changeprefix <game>
+        if (args.length < 3) {
+
+            switch (game) {
+                case "hypixel":
+                case "network":
+                case "nw":
+                    send(sender, "Current: " + Main.CONFIG.getHypixelPrefix());
+                    return;
+
+                case "bedwars":
+                case "bw":
+                    send(sender, "Current: " + Main.CONFIG.getBedwarsPrefix());
+                    return;
+
+                case "skywars":
+                case "sw":
+                    send(sender, "Current: " + Main.CONFIG.getSkywarsPrefix());
+                    return;
+
+                case "uhc":
+                    send(sender, "Current: " + Main.CONFIG.getUhcPrefix());
+                    return;
+
+                default:
+                    send(sender, "Game must be hypixel, bedwars, skywars, or uhc.");
+                    return;
+            }
+        }
+
+        // prefixを結合
+        StringBuilder prefixBuilder = new StringBuilder();
+
+        for (int i = 2; i < args.length; i++) {
+            if (i > 2) {
+                prefixBuilder.append(" ");
+            }
+
+            prefixBuilder.append(args[i]);
+        }
+
+        // 前後のスペースを削除
+        String prefix = prefixBuilder.toString().trim();
+
+        // !reset
+        if (prefix.equalsIgnoreCase("!reset")) {
+
+            switch (game) {
+                case "hypixel":
+                case "network":
+                case "nw":
+                    Main.CONFIG.setHypixelPrefix("§7NWLevel: §e");
+                    break;
+
+                case "bedwars":
+                case "bw":
+                    Main.CONFIG.setBedwarsPrefix("§7BWLevel: §f");
+                    break;
+
+                case "skywars":
+                case "sw":
+                    Main.CONFIG.setSkywarsPrefix("§7SWLevel: §f");
+                    break;
+
+                case "uhc":
+                    Main.CONFIG.setUhcPrefix("§7UHCLevel: §f");
+                    break;
+
+                default:
+                    send(sender, "Game must be hypixel, bedwars, skywars, or uhc.");
+                    return;
+            }
+
+            send(sender, game.toUpperCase() + " prefix reset.");
+            return;
+        }
+
+        // 空文字チェック
+        if (prefix.isEmpty()) {
+            send(sender, "Prefix cannot be empty.");
+            return;
+        }
+
+        // 文字数制限
+        if (prefix.length() > MAX_PREFIX_LENGTH) {
+            send(sender, "Prefix is too long. Maximum length is "
+                    + MAX_PREFIX_LENGTH + " characters.");
+            return;
+        }
+
+        // ゲームごとの保存
         switch (game) {
             case "hypixel":
             case "network":
