@@ -50,67 +50,39 @@ public class HypixelApiClient implements ApiClient {
 
             if (statusCode == 429) {
                 String body = readErrorStream(connection);
-
-                throw new HypixelApiException(
-                        429,
-                        "Hypixel API rate limited" +
-                                (body.isEmpty() ? "" : ": " + body)
-                );
+                throw new HypixelApiException(429, "Hypixel API rate limited" + (body.isEmpty() ? "" : ": " + body));
             }
 
             if (statusCode == 403) {
                 String body = readErrorStream(connection);
-
-                throw new HypixelApiException(
-                        403,
-                        "Hypixel API access forbidden" +
-                                (body.isEmpty() ? "" : ": " + body)
-                );
+                throw new HypixelApiException(403, "Hypixel API access forbidden" + (body.isEmpty() ? "" : ": " + body));
             }
 
             if (statusCode < 200 || statusCode >= 300) {
                 String body = readErrorStream(connection);
-
-                throw new HypixelApiException(
-                        statusCode,
-                        "Hypixel API returned HTTP " + statusCode +
-                                (body.isEmpty() ? "" : ": " + body)
-                );
+                throw new HypixelApiException(statusCode, "Hypixel API returned HTTP " + statusCode + (body.isEmpty() ? "" : ": " + body));
             }
 
             String response = readInputStream(connection.getInputStream());
 
-            if (response == null || response.isEmpty()) {
-                throw new Exception("Hypixel API returned empty response");
-            }
+            if (response == null || response.isEmpty()) throw new Exception("Hypixel API returned empty response");
 
             JsonObject root = new JsonParser().parse(response).getAsJsonObject();
             JsonElement successElement = root.get("success");
 
             if (successElement != null && !successElement.getAsBoolean()) {
-
                 String cause = getString(root, "cause");
 
                 if (root.has("throttle") && root.get("throttle").getAsBoolean()) {
-
-                    throw new HypixelApiException(
-                            429,
-                            "Hypixel API throttle" +
-                                    (cause == null ? "" : ": " + cause)
-                    );
+                    throw new HypixelApiException(429, "Hypixel API throttle" + (cause == null ? "" : ": " + cause));
                 }
 
-                throw new HypixelApiException(
-                        0,
-                        "Hypixel API request failed" +
-                                (cause == null ? "" : ": " + cause)
-                );
+                throw new HypixelApiException(0, "Hypixel API request failed" + (cause == null ? "" : ": " + cause));
             }
 
             JsonElement playerElement = root.get("player");
 
             if (playerElement == null || playerElement.isJsonNull()) {
-
                 return new ApiResponse(
                         null,
                         response,
@@ -202,33 +174,19 @@ public class HypixelApiClient implements ApiClient {
 
     private String readInputStream(InputStream input) throws Exception {
         StringBuilder result = new StringBuilder();
-
-        BufferedReader reader =
-                new BufferedReader(
-                        new InputStreamReader(
-                                input,
-                                StandardCharsets.UTF_8
-                        )
-                );
+        BufferedReader reader = new BufferedReader(new InputStreamReader(input, StandardCharsets.UTF_8));
 
         try {
             String line;
-
-            while ((line = reader.readLine()) != null) {
-                result.append(line);
-            }
-
+            while ((line = reader.readLine()) != null) result.append(line);
         } finally {
             reader.close();
         }
-
         return result.toString();
     }
 
     private String readErrorStream(HttpURLConnection connection) {
-
         InputStream input = connection.getErrorStream();
-
         if (input == null) return "";
 
         try {
@@ -252,10 +210,7 @@ public class HypixelApiClient implements ApiClient {
 
     private double getDouble(JsonObject object, String key, double defaultValue) {
         JsonElement element = object.get(key);
-
-        if (element == null || element.isJsonNull()) {
-            return defaultValue;
-        }
+        if (element == null || element.isJsonNull()) return defaultValue;
 
         try {
             return element.getAsDouble();
@@ -266,7 +221,6 @@ public class HypixelApiClient implements ApiClient {
 
     private int getInt(JsonObject object, String key, int defaultValue) {
         JsonElement element = object.get(key);
-
         if (element == null || element.isJsonNull()) return defaultValue;
 
         try {

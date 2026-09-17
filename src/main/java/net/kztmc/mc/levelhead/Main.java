@@ -34,6 +34,7 @@ import java.util.List;
         clientSideOnly = true
 )
 public class Main {
+    private final Minecraft mc = Minecraft.getMinecraft();
 
     public static final String MOD_ID = "levelhead";
     public static final String MOD_NAME = "kzt-LevelHead";
@@ -45,12 +46,9 @@ public class Main {
     private static ApiClient apiClient;
     private static LocalApiServer localApiServer;
 
-    private final Minecraft mc = Minecraft.getMinecraft();
-
     private int tabCheckTimer = 0;
 
     private static volatile boolean queueAssignmentAllowed = false;
-
     private static volatile boolean onHypixelNetwork = false;
 
     public static boolean dev = false;
@@ -72,13 +70,8 @@ public class Main {
                         new Runnable() {
                             @Override
                             public void run() {
-                                if (localApiServer != null) {
-                                    localApiServer.stop();
-                                }
-
-                                if (CACHE != null) {
-                                    CACHE.shutdown();
-                                }
+                                if (localApiServer != null) localApiServer.stop();
+                                if (CACHE != null) CACHE.shutdown();
                             }
                         },
                         "LevelHead-Shutdown"
@@ -163,9 +156,7 @@ public class Main {
                     info.getGameProfile().getName()
             );
 
-            if (displayName.contains("§k")) {
-                continue;
-            }
+            if (displayName.contains("§k")) continue;
 
             //if (Main.dev) LevelHeadCommand.send(mc.thePlayer, "QUEUE CHECK: " + info.getGameProfile().getName());
 
@@ -184,9 +175,7 @@ public class Main {
 
     @SubscribeEvent
     public void onWorldUnload(WorldEvent.Unload event) {
-        if (CACHE != null) {
-            CACHE.resetQueue();
-        }
+        if (CACHE != null) CACHE.resetQueue();
 
         queueAssignmentAllowed = false;
         onHypixelNetwork = false;
@@ -194,11 +183,10 @@ public class Main {
     }
 
     private boolean isQueueAssignmentAllowed() {
+        if (mc.theWorld == null) return false;
         if (Main.dev) LevelHeadCommand.send(mc.thePlayer, "QUEUE CHECKING");
 
         onHypixelNetwork = false;
-
-        if (mc.theWorld == null) return false;
 
         Scoreboard scoreboard = mc.theWorld.getScoreboard();
         if (scoreboard == null) return false;
@@ -210,9 +198,7 @@ public class Main {
         List<String> lines = new ArrayList<String>();
 
         for (Score score : scores) {
-            if (score.getPlayerName().startsWith("#")) {
-                continue;
-            }
+            if (score.getPlayerName().startsWith("#")) continue;
 
             String line = ScorePlayerTeam.formatPlayerName(
                     scoreboard.getPlayersTeam(score.getPlayerName()),

@@ -66,11 +66,7 @@ public class LocalApiServer {
                     return;
                 }
 
-                sendResponse(
-                        exchange,
-                        404,
-                        createError("Player not available")
-                );
+                sendResponse(exchange, 404, createError("Player not available"));
 
             } catch (Exception e) {
                 System.err.println("[LevelHead] Local API request failed");
@@ -148,8 +144,6 @@ public class LocalApiServer {
     }
 
     private static String escapeJson(String text) {
-        return text
-                .replace("\\", "\\\\")
-                .replace("\"", "\\\"");
+        return text.replace("\\", "\\\\").replace("\"", "\\\"");
     }
 }

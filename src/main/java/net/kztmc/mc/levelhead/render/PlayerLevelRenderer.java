@@ -25,34 +25,29 @@ public class PlayerLevelRenderer {
 
     @SubscribeEvent
     public void onRenderWorldLast(RenderWorldLastEvent event) {
-
         if (mc.theWorld == null || mc.thePlayer == null) return;
 
         for (EntityPlayer player : mc.theWorld.playerEntities) {
-
             if (player == null) continue;
             if (player.isInvisible()) continue;
 
+            // 一人称
             if (player == mc.thePlayer && mc.gameSettings.thirdPersonView == 0) continue;
 
-            // 表示名が難読化(§k)されている間はAPIリクエストを出さない
+            // 難読化(§k)
             if (hasObfuscatedName(player)) continue;
 
+            // 距離(>64)
             float distance = player.getDistanceToEntity(mc.thePlayer);
-
             if (distance > 64.0F) continue;
 
             PlayerStats stats;
-
-            // 自分自身はfooter(www.hypixel.net)判定のみで表示を許可する。
-            // 他プレイヤーはdate/M行も含めた厳密な判定(queueAssignmentAllowed)を使う。
             boolean allowed = (player == mc.thePlayer)
                     ? Main.isOnHypixelNetworkCached()
                     : Main.isQueueAssignmentAllowedCached();
 
             if (allowed) {
                 //ingame
-
                 PlayerStatsCache.Priority priority;
 
                 if (distance <= 16.0F) {
@@ -64,21 +59,14 @@ public class PlayerLevelRenderer {
                 } else {
                     priority = PlayerStatsCache.Priority.LOW;
                 }
-
-                stats = Main.CACHE.get(
-                        player.getUniqueID(),
-                        priority
-                );
+                stats = Main.CACHE.get(player.getUniqueID(), priority);
 
             } else {
                 //outgame
-                stats = Main.CACHE.getCached(
-                        player.getUniqueID()
-                );
+                stats = Main.CACHE.getCached(player.getUniqueID());
             }
 
             if (stats == null) continue;
-
 
             double x = player.lastTickPosX
                     + (player.posX - player.lastTickPosX) * event.partialTicks
@@ -173,19 +161,8 @@ public class PlayerLevelRenderer {
 
         float drawX = -width / 2.0F;
 
-        drawBackground(
-                drawX - 2,
-                -2,
-                width + 4,
-                font.FONT_HEIGHT + 4
-        );
-
-        font.drawStringWithShadow(
-                text,
-                drawX,
-                0,
-                0xFFFFFF
-        );
+        drawBackground(drawX - 2, -2, width + 4, font.FONT_HEIGHT + 4);
+        font.drawStringWithShadow(text, drawX, 0, 0xFFFFFF);
 
         GL11.glDisable(GL11.GL_BLEND);
         GL11.glDepthMask(true);
@@ -195,10 +172,7 @@ public class PlayerLevelRenderer {
         GL11.glPopMatrix();
     }
 
-    /*
-     * TabListの表示名に§k(難読化)が含まれている場合は
-     * APIリクエスト自体を出さない。
-     */
+    // 難読化(§k)
     private boolean hasObfuscatedName(EntityPlayer player) {
         if (mc.getNetHandler() == null) return false;
 
@@ -219,7 +193,6 @@ public class PlayerLevelRenderer {
         if (mc.theWorld == null) return false;
 
         ScoreObjective objective = mc.theWorld.getScoreboard().getObjectiveInDisplaySlot(2);
-
         if (objective == null) return false;
 
         String playerName = player.getName();

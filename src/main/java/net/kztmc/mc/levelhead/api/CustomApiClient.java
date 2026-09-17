@@ -25,12 +25,9 @@ public class CustomApiClient implements ApiClient {
 
         String template = config.getCustomApiUrl();
 
-        if (template == null || template.trim().isEmpty()) {
-            throw new IllegalStateException("Custom API URL is not configured");
-        }
+        if (template == null || template.trim().isEmpty()) throw new IllegalStateException("Custom API URL is not configured");
 
         String urlString = template.replace("{uuid}", uuid.toString());
-
         URL url = new URL(urlString);
 
         HttpURLConnection connection = (HttpURLConnection) url.openConnection();
@@ -55,21 +52,12 @@ public class CustomApiClient implements ApiClient {
                 throw new Exception("HTTP " + responseCode);
             }
 
-            BufferedReader reader =
-                    new BufferedReader(
-                            new InputStreamReader(
-                                    connection.getInputStream(),
-                                    StandardCharsets.UTF_8
-                            )
-                    );
-
+            BufferedReader reader = new BufferedReader(new InputStreamReader(connection.getInputStream(), StandardCharsets.UTF_8));
             StringBuilder response = new StringBuilder();
 
             String line;
 
-            while ((line = reader.readLine()) != null) {
-                response.append(line);
-            }
+            while ((line = reader.readLine()) != null) response.append(line);
 
             reader.close();
 
