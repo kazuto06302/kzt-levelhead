@@ -36,6 +36,11 @@ public class ModConfig {
         String levelType = "BEDWARS";
 
         int requestInterval = 1000;
+
+        String hypixelPrefix = "§7NWLevel: §e";
+        String bedwarsPrefix = "§7BWLevel: §f";
+        String skywarsPrefix = "§7SWLevel: §f";
+        String uhcPrefix = "§7UHCLevel: §f";
     }
 
     private final File file;
@@ -43,20 +48,10 @@ public class ModConfig {
     private Data data = new Data();
 
     public ModConfig(File configDirectory) {
+        File directory = new File(configDirectory, "levelhead");
+        if (!directory.exists()) directory.mkdirs();
 
-        File directory = new File(
-                configDirectory,
-                "levelhead"
-        );
-
-        if (!directory.exists()) {
-            directory.mkdirs();
-        }
-
-        file = new File(
-                directory,
-                "config.json"
-        );
+        file = new File(directory, "config.json");
     }
 
     public void load() {
@@ -67,16 +62,11 @@ public class ModConfig {
         }
 
         try {
-
             FileReader reader = new FileReader(file);
             Data loaded = gson.fromJson(reader, Data.class);
-
             reader.close();
 
-            if (loaded != null) {
-                data = loaded;
-            }
-
+            if (loaded != null) data = loaded;
         } catch (Exception e) {
             System.err.println("[LevelHead] Failed to load config");
             e.printStackTrace();
@@ -84,7 +74,6 @@ public class ModConfig {
     }
 
     public void save() {
-
         try {
             FileWriter writer = new FileWriter(file);
 
@@ -140,22 +129,8 @@ public class ModConfig {
         return data.cacheDurationHours * 60L * 60L * 1000L;
     }
 
-    public long getCacheDurationHours() {
-        return data.cacheDurationHours;
-    }
-
-    public void setCacheDurationHours(long hours) {
-        data.cacheDurationHours = Math.max(1, hours);
-        save();
-    }
-
     public int getMaxCacheSize() {
         return data.maxCacheSize;
-    }
-
-    public void setMaxCacheSize(int size) {
-        data.maxCacheSize = Math.max(100, size);
-        save();
     }
 
     public LevelType getLevelType() {
@@ -173,11 +148,43 @@ public class ModConfig {
         save();
     }
 
-    public File getFile() {
-        return file;
-    }
-
     public int getRequestInterval() {
         return data.requestInterval;
+    }
+
+    public String getHypixelPrefix() {
+        return data.hypixelPrefix;
+    }
+
+    public void setHypixelPrefix(String prefix) {
+        data.hypixelPrefix = prefix;
+        save();
+    }
+
+    public String getBedwarsPrefix() {
+        return data.bedwarsPrefix;
+    }
+
+    public void setBedwarsPrefix(String prefix) {
+        data.bedwarsPrefix = prefix;
+        save();
+    }
+
+    public String getSkywarsPrefix() {
+        return data.skywarsPrefix;
+    }
+
+    public void setSkywarsPrefix(String prefix) {
+        data.skywarsPrefix = prefix;
+        save();
+    }
+
+    public String getUhcPrefix() {
+        return data.uhcPrefix;
+    }
+
+    public void setUhcPrefix(String prefix) {
+        data.uhcPrefix = prefix;
+        save();
     }
 }

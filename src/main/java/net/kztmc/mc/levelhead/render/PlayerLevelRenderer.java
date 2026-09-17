@@ -89,6 +89,7 @@ public class PlayerLevelRenderer {
 
         ModConfig.LevelType levelType = Main.CONFIG.getLevelType();
 
+        String rank = stats.getRank();
         int nwlv = stats.getHypixelLevel();
         int bwlv = stats.getBedwarsLevel();
         int swlv = stats.getSkywarsLevel();
@@ -101,13 +102,16 @@ public class PlayerLevelRenderer {
                 .replace("]","");
 
         if (levelType == ModConfig.LevelType.HYPIXEL) {
-            text = "§f" + "NWLevel: " + "§e" + nwlv + "§f";
-        } else if (levelType == ModConfig.LevelType.BEDWARS){
-            text = "§f" + "BWLevel: " + bwprestage;
+            text = "§f" + rank + " §7| " + Main.CONFIG.getHypixelPrefix() + nwlv + "§f";
+
+        } else if (levelType == ModConfig.LevelType.BEDWARS) {
+            text = "§f" + rank + " §7| " + Main.CONFIG.getBedwarsPrefix() + bwprestage;
+
         } else if (levelType == ModConfig.LevelType.SKYWARS) {
-            text = "§f" + "SWLevel: " + swprestage;
+            text = "§f" + rank + " §7| " + Main.CONFIG.getSkywarsPrefix() + swprestage;
+
         } else if (levelType == ModConfig.LevelType.UHC) {
-            text = "§f" + "UHCLevel: " + uhcprestage;
+            text = "§f" + rank + " §7| " + Main.CONFIG.getUhcPrefix() + uhcprestage;
         }
 
         FontRenderer font = mc.fontRendererObj;

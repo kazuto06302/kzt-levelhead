@@ -94,6 +94,7 @@ public class HypixelApiClient implements ApiClient {
 
             JsonObject player = playerElement.getAsJsonObject();
             String name = getString(player, "displayname");
+            String rank = getHypixelRank(player);
 
             int hypixelLevel = 0;
             int bedwarsLevel = 0;
@@ -101,8 +102,7 @@ public class HypixelApiClient implements ApiClient {
             String skywarsLevelFormatted = "";
             int uhcLevel = 0;
 
-            ModConfig.LevelType levelType =
-                    Main.CONFIG.getLevelType();
+            ModConfig.LevelType levelType = Main.CONFIG.getLevelType();
 
             if (levelType == ModConfig.LevelType.HYPIXEL) {
                 double networkExp = getDouble(player, "networkExp", 0.0D);
@@ -150,6 +150,7 @@ public class HypixelApiClient implements ApiClient {
             PlayerStats stats =
                     new PlayerStats(
                             name,
+                            rank,
                             hypixelLevel,
                             bedwarsLevel,
                             skywarsLevel,
@@ -235,6 +236,59 @@ public class HypixelApiClient implements ApiClient {
 
         if (element == null || element.isJsonNull() || !element.isJsonObject()) return null;
         return element.getAsJsonObject();
+    }
+
+    private String getHypixelRank(JsonObject player) {
+        String rank = getString(player, "rank");
+        String monthlyPackageRank = getString(player, "monthlyPackageRank");
+        String newPackageRank = getString(player, "newPackageRank");
+
+        // YouTube
+        if ("YOUTUBER".equals(rank)) {
+            return "§cYT";
+        }
+
+        // MVP++
+        if ("SUPERSTAR".equals(monthlyPackageRank)
+                || "MVP_PLUS_PLUS".equals(rank)) {
+            return "§6++";
+        }
+
+        // Staff
+        if ("ADMIN".equals(rank)) {
+            return "§4ADMIN";
+        }
+
+        if ("MODERATOR".equals(rank)) {
+            return "§2MOD";
+        }
+
+        if ("HELPER".equals(rank)) {
+            return "§3HELPER";
+        }
+
+        // MVP+
+        if ("MVP_PLUS".equals(newPackageRank)) {
+            return "§bM§4+";
+        }
+
+        // MVP
+        if ("MVP".equals(newPackageRank)) {
+            return "§bM";
+        }
+
+        // VIP+
+        if ("VIP_PLUS".equals(newPackageRank)) {
+            return "§aV§e+";
+        }
+
+        // VIP
+        if ("VIP".equals(newPackageRank)) {
+            return "§aV";
+        }
+
+        // Rankなし
+        return "§8--";
     }
 
     private int getNetworkLevel(double networkExp) {

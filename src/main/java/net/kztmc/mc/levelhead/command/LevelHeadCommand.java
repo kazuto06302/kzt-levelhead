@@ -34,7 +34,7 @@ public class LevelHeadCommand extends CommandBase {
 
     @Override
     public String getCommandUsage(ICommandSender sender) {
-        return "/levelhead <key|mode|api|clearcache|reload|interval|game>";
+        return "/levelhead <key|mode|api|clearcache|reload|interval|game|changeprefix>";
     }
 
     @Override
@@ -49,12 +49,23 @@ public class LevelHeadCommand extends CommandBase {
                     "clearcache",
                     "reload",
                     "interval",
-                    "game"
+                    "game",
+                    "changeprefix"
             );
         }
 
         if (args.length == 2 && args[0].equalsIgnoreCase("mode")) {
             return getListOfStringsMatchingLastWord(args, "hypixel", "custom");
+        }
+
+        if (args.length == 2 && args[0].equalsIgnoreCase("changeprefix")) {
+            return getListOfStringsMatchingLastWord(
+                    args,
+                    "hypixel",
+                    "bedwars",
+                    "skywars",
+                    "uhc"
+            );
         }
 
         return Collections.emptyList();
@@ -106,6 +117,11 @@ public class LevelHeadCommand extends CommandBase {
 
         if (args[0].equalsIgnoreCase("game")) {
             setGame(sender, args);
+            return;
+        }
+
+        if (args[0].equalsIgnoreCase("changeprefix")) {
+            changePrefix(sender, args);
             return;
         }
 
@@ -175,6 +191,45 @@ public class LevelHeadCommand extends CommandBase {
         send(sender, "Custom API URL saved.");
     }
 
+    private void changePrefix(ICommandSender sender, String[] args) {
+
+        if (args.length < 3) {
+            send(sender, "Usage: /levelhead changeprefix <hypixel|bedwars|skywars|uhc> <prefix>");
+            return;
+        }
+
+        String game = args[1].toLowerCase();
+        String prefix = args[2];
+
+        switch (game) {
+            case "hypixel":
+            case "network":
+            case "nw":
+                Main.CONFIG.setHypixelPrefix(prefix);
+                break;
+
+            case "bedwars":
+            case "bw":
+                Main.CONFIG.setBedwarsPrefix(prefix);
+                break;
+
+            case "skywars":
+            case "sw":
+                Main.CONFIG.setSkywarsPrefix(prefix);
+                break;
+
+            case "uhc":
+                Main.CONFIG.setUhcPrefix(prefix);
+                break;
+
+            default:
+                send(sender, "Game must be hypixel, bedwars, skywars, or uhc.");
+                return;
+        }
+
+        send(sender, "Prefix changed to: " + prefix);
+    }
+
     private void help(ICommandSender sender) {
         send(sender, "§b/levelhead key <key> §7- Set Hypixel API key");
         send(sender, "§b/levelhead mode <hypixel|custom> §7- Change API mode");
@@ -183,6 +238,7 @@ public class LevelHeadCommand extends CommandBase {
         send(sender, "§b/levelhead reload §7- Reload configuration");
         send(sender, "§b/levelhead interval §7- Set requestInterval");
         send(sender, "§b/levelhead game §7- Set Gamemode");
+        send(sender, "§b/levelhead changeprefix <game> <prefix> §7- Change level prefix");
     }
 
     private void setInterval(ICommandSender sender, String[] args) {
@@ -217,17 +273,32 @@ public class LevelHeadCommand extends CommandBase {
             return;
         }
 
-        if (args[1].equalsIgnoreCase("hypixel") || args[1].equalsIgnoreCase("network")) {
-            Main.CONFIG.setLevelType(ModConfig.LevelType.HYPIXEL);
-        } else if (args[1].equalsIgnoreCase("bedwars") || args[1].equalsIgnoreCase("bw")) {
-            Main.CONFIG.setLevelType(ModConfig.LevelType.BEDWARS);
-        } else if (args[1].equalsIgnoreCase("skywars") || args[1].equalsIgnoreCase("sw")) {
-            Main.CONFIG.setLevelType(ModConfig.LevelType.SKYWARS);
-        } else if (args[1].equalsIgnoreCase("uhc")) {
-            Main.CONFIG.setLevelType(ModConfig.LevelType.UHC);
-        } else {
-            send(sender, "Mode must be hypixel, bedwars, skywars, uhc");
-            return;
+        String game = args[1].toLowerCase();
+
+        switch (game) {
+            case "hypixel":
+            case "network":
+            case "nw":
+                Main.CONFIG.setLevelType(ModConfig.LevelType.HYPIXEL);
+                break;
+
+            case "bedwars":
+            case "bw":
+                Main.CONFIG.setLevelType(ModConfig.LevelType.BEDWARS);
+                break;
+
+            case "skywars":
+            case "sw":
+                Main.CONFIG.setLevelType(ModConfig.LevelType.SKYWARS);
+                break;
+
+            case "uhc":
+                Main.CONFIG.setLevelType(ModConfig.LevelType.UHC);
+                break;
+
+            default:
+                send(sender, "Game must be hypixel, bedwars, skywars, or uhc.");
+                return;
         }
 
         Main.rebuildApiClient();

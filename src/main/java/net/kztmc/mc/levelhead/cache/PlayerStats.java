@@ -3,6 +3,7 @@ package net.kztmc.mc.levelhead.cache;
 public class PlayerStats {
 
     private final String name;
+    private final String rank;
     private final int hypixelLevel;
     private final int bedwarsLevel;
     private final int skywarsLevel;
@@ -11,6 +12,7 @@ public class PlayerStats {
 
     public PlayerStats(
             String name,
+            String rank,
             int hypixelLevel,
             int bedwarsLevel,
             int skywarsLevel,
@@ -18,6 +20,7 @@ public class PlayerStats {
             int uhcLevel
     ) {
         this.name = name;
+        this.rank = rank;
         this.hypixelLevel = hypixelLevel;
         this.bedwarsLevel = bedwarsLevel;
         this.skywarsLevel = skywarsLevel;
@@ -27,6 +30,10 @@ public class PlayerStats {
 
     public String getName() {
         return name;
+    }
+
+    public String getRank() {
+        return rank;
     }
 
     public int getHypixelLevel() {
