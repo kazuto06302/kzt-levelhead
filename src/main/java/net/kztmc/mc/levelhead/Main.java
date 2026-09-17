@@ -50,9 +50,7 @@ public class Main {
     private int tabCheckTimer = 0;
 
     private static volatile boolean queueAssignmentAllowed = false;
-    // 自分自身の表示専用: footer(www.hypixel.net)のみの判定。
-    // date/M行の判定でズレる(ロビー切替直後など)ことがあるため、
-    // 自分自身はこちらだけで許可する。
+
     private static volatile boolean onHypixelNetwork = false;
 
     public static boolean dev = false;
@@ -113,7 +111,6 @@ public class Main {
         return queueAssignmentAllowed;
     }
 
-    // 自分自身の表示可否用(footerのみで判定、date/M行は見ない)
     public static boolean isOnHypixelNetworkCached() {
         return onHypixelNetwork;
     }
@@ -140,15 +137,8 @@ public class Main {
             return;
         }
 
-        // Hypixel判定はTabList人数に関係なく毎回行う
-        // (ロビー等24人以上いる場面で判定自体がスキップされ、
-        //  QUEUE ALLOWEDが出ない/自分のスタッツが表示されない原因になっていた)
         queueAssignmentAllowed = isQueueAssignmentAllowed();
 
-        // 自分自身はfooter(www.hypixel.net)判定のみで許可する。
-        // queueAssignmentAllowedはfooterに加えてdate/M行も要求するが、
-        // 自分自身の表示はそこまで厳密にせず、TabList人数にも関わらず
-        // 常に取得を試みる(ロビーでも表示させるため)。
         if (onHypixelNetwork && mc.thePlayer.getUniqueID() != null) {
             CACHE.get(mc.thePlayer.getUniqueID(), PlayerStatsCache.Priority.HIGH);
         }
@@ -158,11 +148,13 @@ public class Main {
         Collection<NetworkPlayerInfo> players = mc.getNetHandler().getPlayerInfoMap();
 
         int playerCount = players.size();
-        // 大人数(ロビー等)ではTabList全員分の先読みのみAPI保護のため抑制する
+
         if (playerCount >= 24) return;
 
         for (NetworkPlayerInfo info : players) {
             if (info == null || info.getGameProfile() == null) continue;
+
+            if (info.getGameProfile().getId().equals(mc.thePlayer.getUniqueID())) continue;
 
             String displayName = info.getPlayerTeam() == null
                     ? info.getGameProfile().getName()
@@ -171,8 +163,6 @@ public class Main {
                     info.getGameProfile().getName()
             );
 
-            // 表示名が難読化(§k)されている間はAPIリクエストを出さない
-            // (ニック非表示中/読込中などで、実際の名前・意味のある問い合わせにならないため)
             if (displayName.contains("§k")) {
                 continue;
             }
@@ -234,9 +224,6 @@ public class Main {
 
         if (lines.isEmpty()) return false;
 
-        // footer(www.hypixel.net)判定はdate/M行の判定より先に、
-        // かつ独立して行う。自分自身の表示可否(onHypixelNetwork)は
-        // こちらのみで決まる。
         String lastLine = lines.get(0);
         String cleanLastLine = removeFormattingCodes(lastLine).trim();
 
@@ -268,28 +255,16 @@ public class Main {
         if (text == null) return false;
 
         String visible = removeFormattingCodes(text).trim();
-        // Hypixelは日付を"9/16/26"のようにゼロ埋めせず表示することがあるため
-        // 桁数を1〜2桁どちらでも許容する
-        return visible.matches("^\\d{1,2}/\\d{1,2}/\\d{2}\\s+m.*");
+        return visible.matches("^\\d{2}/\\d{2}/\\d{2}\\s+m.*");
     }
 
-    /*
-     * サイドバー最終行がHypixelのURLかどうかを判定する。
-     * Hypixelはイベント装飾として絵文字(🎂等)をURL文字列の
-     * 途中に挿入してくることがある(例: "www.hypixel.ne🎂t")ため、
-     * 英数字とドット以外の文字(絵文字・記号・空白など)は
-     * すべて除去してから比較する。
-     */
     private boolean isHypixelFooterLine(String cleanLastLine) {
         if (cleanLastLine == null || cleanLastLine.isEmpty()) return false;
 
         String strippedDecorations = cleanLastLine.replaceAll("[^a-zA-Z0-9.]", "");
         String normalized = strippedDecorations.toLowerCase();
 
-        return normalized.contains("www.hypixel.net")
-                || normalized.contains("www.hypixel.com")
-                || normalized.contains("hypixel.net")
-                || normalized.contains("hypixel.com");
+        return normalized.contains("www.hypixel.net") || normalized.contains("hypixel.net");
     }
 
     private String removeFormattingCodes(String text) {
@@ -302,7 +277,6 @@ public class Main {
                 i++;
                 continue;
             }
-
             result.append(c);
         }
 

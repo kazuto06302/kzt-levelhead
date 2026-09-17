@@ -47,6 +47,12 @@ public class PlayerStatsCache {
      */
     private static final long RATE_LIMIT_COOLDOWN = 60000L;
 
+    /*
+     * 取得に失敗した場合の
+     * フォールバック間隔。
+     */
+    private static final long FAILURE_RETRY_DELAY = 10000L;
+
 
     public enum Priority {
 
@@ -141,6 +147,10 @@ public class PlayerStatsCache {
      */
     private final Set<UUID> inFlight = new HashSet<UUID>();
 
+    /*
+     * 取得に失敗したUUID。
+     */
+    private final Map<UUID, Long> failedUntil = new HashMap<UUID, Long>();
 
     public PlayerStatsCache(ModConfig config) {
 
@@ -259,6 +269,15 @@ public class PlayerStatsCache {
 
 
     private synchronized void enqueue(UUID uuid, Priority priority, Callback callback) {
+        Long retryUntil = failedUntil.get(uuid);
+
+        if (retryUntil != null) {
+            if (System.currentTimeMillis() < retryUntil) {
+                return;
+            }
+
+            failedUntil.remove(uuid);
+        }
 
         if (pending.contains(uuid) || inFlight.contains(uuid)) {
             Request current = requests.get(uuid);
@@ -390,6 +409,11 @@ public class PlayerStatsCache {
                         inFlight.remove(request.uuid);
                     }
 
+                    failedUntil.put(
+                            request.uuid,
+                            System.currentTimeMillis() + FAILURE_RETRY_DELAY
+                    );
+
                     return;
                 }
 
@@ -500,8 +524,13 @@ public class PlayerStatsCache {
                     requests.remove(request.uuid);
                     inFlight.remove(request.uuid);
                 }
+                failedUntil.put(
+                        request.uuid,
+                        System.currentTimeMillis() + FAILURE_RETRY_DELAY
+                );
             }
 
+            if (Main.dev) LevelHeadCommand.send(Minecraft.getMinecraft().thePlayer, "Failed to fetch" + request.uuid);
             System.err.println("[LevelHead] Failed to fetch" + request.uuid);
             e.printStackTrace();
 
