@@ -1,8 +1,8 @@
 # KZT-LevelHead
 
-> **Hypixel Network 向け LevelHead MOD**
+> **A LevelHead mod for the Hypixel Network**
 >
-> プレイヤーの各種ステータスを頭上に表示し、ランク・スターカラー・プレフィックスなどを自由にカスタマイズできます。
+> Displays player statistics above their heads with customizable ranks, star colors, prefixes, and more.
 
 **Forge / DawnClient · Minecraft 1.8.9**
 
@@ -12,7 +12,7 @@
 
 ### 📊 Player Stats
 
-Hypixel のプレイヤー情報を取得し、頭上に表示します。
+Fetch and display Hypixel player statistics above their heads.
 
 | Stat | Available |
 | --- | :---: |
@@ -23,7 +23,7 @@ Hypixel のプレイヤー情報を取得し、頭上に表示します。
 
 ### 🎨 Display Customization
 
-- **Rank の同時表示**
+- **Rank display**
   - V
   - V+
   - M
@@ -31,56 +31,54 @@ Hypixel のプレイヤー情報を取得し、頭上に表示します。
   - ++
   - NI
   - YT
-- **BedWars / SkyWars スターのカラー化**
-- **カスタムプレフィックス**
-- 完全にカスタマイズ可能な見た目を目指して開発中
+- **Colored BedWars / SkyWars stars**
+- **Custom prefixes**
+- Designed to provide a highly customizable appearance
 
 ### ⚡ API & Performance
 
-- **Hypixel Official API** / **Custom API** に対応
-- **Seraph との API 競合対策**
-- 標準 **6時間キャッシュ** による重複リクエストの削減
-- API Rate Limit 対策
-- **In-Game のプレイヤーのみ取得**
-  - ロビーにいるプレイヤーなど、不要な API リクエストを抑制
+- Supports the **Official Hypixel API** and **Custom API**
+- **Seraph API conflict prevention**
+- Standard **6-hour cache** to reduce duplicate requests
+- Helps prevent unnecessary API rate-limit usage
+- Only fetches players when they are **in-game**
+  - Avoids unnecessary requests for lobby players
 
 ---
 
 ## 🌐 API
 
-Seraph との API 競合を避けるため、**Custom Hypixel Proxy** を利用した API のセルフホスト構成に対応しています。
+To avoid API conflicts with Seraph, KZT-LevelHead supports a self-hosted API setup using **Custom Hypixel Proxy**.
 
 ### Custom API
 
-取得した Hypixel API の結果を **Port 3015** でそのまま提供します。
+Hypixel API responses can be served directly through **Port 3015**.
 
 ### Cache
 
-取得したプレイヤー情報は標準で **6時間** キャッシュされます。
+Player information is cached for **6 hours** by default.
 
-これにより、
+This helps reduce:
 
-- 同じプレイヤーへの重複リクエスト
-- 不要な API リクエスト
-- API Rate Limit の消費
-
-を抑えます。
+- Duplicate requests for the same player
+- Unnecessary API requests
+- API rate-limit usage
 
 ---
 
 ## 🛠 Commands
 
-すべてのコマンドは `/levelhead` から使用できます。
+All commands are available through `/levelhead`.
 
 | Command | Description |
 | --- | --- |
-| `/levelhead key <key>` | Hypixel API Key を設定 |
-| `/levelhead mode <hypixel\|custom>` | API モードを変更 |
-| `/levelhead api <url>` | Custom API URL を設定 |
-| `/levelhead clearcache` | キャッシュを削除 |
-| `/levelhead reload` | 設定を再読み込み |
-| `/levelhead interval` | リクエスト間隔を設定 |
-| `/levelhead game` | 対象ゲームモードを設定 |
+| `/levelhead key <key>` | Set the Hypixel API key |
+| `/levelhead mode <hypixel\|custom>` | Change the API mode |
+| `/levelhead api <url>` | Set the Custom API URL |
+| `/levelhead clearcache` | Clear the cache |
+| `/levelhead reload` | Reload the configuration |
+| `/levelhead interval` | Set the request interval |
+| `/levelhead game` | Set the target game mode |
 
 ---
 
@@ -95,18 +93,18 @@ Seraph との API 競合を避けるため、**Custom Hypixel Proxy** を利用�
 
 ## 📌 Roadmap
 
-- [ ] スターブースター
-- [ ] より細かい表示カスタマイズ
-- [ ] その他の Hypixel Stats 対応
+- [ ] Star Booster
+- [ ] More display customization options
+- [ ] Additional Hypixel statistics
 
 ---
 
 ## 📫 Contact
 
-**Developer:** Kazut0_  
+**Developer:** Kazut0_
 
 ---
 
 <p align="center">
-  <sub>KZT-LevelHead — A customizable LevelHead mod for Hypixel Network.</sub>
+  <sub>KZT-LevelHead — A customizable LevelHead mod for the Hypixel Network.</sub>
 </p>
