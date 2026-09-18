@@ -104,7 +104,6 @@ Seraph との API 競合を避けるため、**Custom Hypixel Proxy** を利用�
 ## 📫 Contact
 
 **Developer:** Kazut0_  
-**Email:** `Kazut0_@kztmc.net`
 
 ---
 
