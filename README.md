@@ -1,42 +1,113 @@
-## KZT-LEVELHEAD
-**Hypixelネットワークで動作するレベルヘッドMOD。**  
-・Forge / DawnClient 1.8.9 向けに作成された最新鋭のレベルヘッドMOD  
-・BLC / LCなどにはない機能の搭載  
-・完全にカスタマイズ可能な見た目を目指す
+# KZT-LevelHead
 
-### 機能
+> **Hypixel Network 向け LevelHead MOD**
+>
+> プレイヤーの各種ステータスを頭上に表示し、ランク・スターカラー・プレフィックスなどを自由にカスタマイズできます。
 
-__Stats取得方法__  
-・Hypixel公式API  
-・Custom API
+**Forge / DawnClient · Minecraft 1.8.9**
 
-__取得可能な情報__  
-・Networkレベル  
-・Bedwarsスター  
-・Skywarsスター  
-・UHCレベル   
+---
 
-__追加機能__  
-・SeraphとのAPI競合対策  
-・ランクの同時表示 例: V, V+, M, M+, ++, NI, YT  
-・スターのカラー化   
-（・スターブースター ）  
-・カスタムプレフィックス   
+## ✨ Features
 
-__API__  
-・Seraphとの競合によりAPI Limitの制限を、  
-　APIのセルフホストとSeraphの機能「Custom Hypixel Proxy」で実現  
-・ポート3015でHypixelAPIの取得結果をそのままポート。  
-・標準6時間のキャッシュ機能により重複したAPI取得を防止、レート制限を対策。  
-・ingame中のみの表示でロビーのプレイヤーの不要な取得を防止。
+### 📊 Player Stats
 
-__コマンド__  
-/levelhead key <key> - Set Hypixel API key  
-/levelhead mode <hypixel|custom> - Change API mode  
-/levelhead api <url> - Set custom API URL  
-/levelhead clearcache - Clear cache  
-/levelhead reload - Reload configuration  
-/levelhead interval - Set requestInterval  
-/levelhead game - Set Gamemode  
+Hypixel のプレイヤー情報を取得し、頭上に表示します。
 
-**Dev : Kazut0_@kztmc.net**
+| Stat | Available |
+| --- | :---: |
+| Network Level | ✅ |
+| BedWars Stars | ✅ |
+| SkyWars Stars | ✅ |
+| UHC Level | ✅ |
+
+### 🎨 Display Customization
+
+- **Rank の同時表示**
+  - V
+  - V+
+  - M
+  - M+
+  - ++
+  - NI
+  - YT
+- **BedWars / SkyWars スターのカラー化**
+- **カスタムプレフィックス**
+- 完全にカスタマイズ可能な見た目を目指して開発中
+
+### ⚡ API & Performance
+
+- **Hypixel Official API** / **Custom API** に対応
+- **Seraph との API 競合対策**
+- 標準 **6時間キャッシュ** による重複リクエストの削減
+- API Rate Limit 対策
+- **In-Game のプレイヤーのみ取得**
+  - ロビーにいるプレイヤーなど、不要な API リクエストを抑制
+
+---
+
+## 🌐 API
+
+Seraph との API 競合を避けるため、**Custom Hypixel Proxy** を利用した API のセルフホスト構成に対応しています。
+
+### Custom API
+
+取得した Hypixel API の結果を **Port 3015** でそのまま提供します。
+
+### Cache
+
+取得したプレイヤー情報は標準で **6時間** キャッシュされます。
+
+これにより、
+
+- 同じプレイヤーへの重複リクエスト
+- 不要な API リクエスト
+- API Rate Limit の消費
+
+を抑えます。
+
+---
+
+## 🛠 Commands
+
+すべてのコマンドは `/levelhead` から使用できます。
+
+| Command | Description |
+| --- | --- |
+| `/levelhead key <key>` | Hypixel API Key を設定 |
+| `/levelhead mode <hypixel\|custom>` | API モードを変更 |
+| `/levelhead api <url>` | Custom API URL を設定 |
+| `/levelhead clearcache` | キャッシュを削除 |
+| `/levelhead reload` | 設定を再読み込み |
+| `/levelhead interval` | リクエスト間隔を設定 |
+| `/levelhead game` | 対象ゲームモードを設定 |
+
+---
+
+## 🎮 Supported Environment
+
+- **Minecraft:** 1.8.9
+- **Mod Loader:** Forge
+- **Client:** DawnClient
+- **Network:** Hypixel
+
+---
+
+## 📌 Roadmap
+
+- [ ] スターブースター
+- [ ] より細かい表示カスタマイズ
+- [ ] その他の Hypixel Stats 対応
+
+---
+
+## 📫 Contact
+
+**Developer:** Kazut0_  
+**Email:** `Kazut0_@kztmc.net`
+
+---
+
+<p align="center">
+  <sub>KZT-LevelHead — A customizable LevelHead mod for Hypixel Network.</sub>
+</p>
