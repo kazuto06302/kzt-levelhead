@@ -84,6 +84,7 @@ public class Main {
         MinecraftForge.EVENT_BUS.register(new PlayerLevelRenderer());
         MinecraftForge.EVENT_BUS.register(new LevelHeadCommand());
         MinecraftForge.EVENT_BUS.register(this);
+        System.out.println("[LevelHead] Enabled LEVELHEAD by Kazut0_");
     }
 
     public static void rebuildApiClient() {

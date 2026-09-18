@@ -254,15 +254,22 @@ public class HypixelApiClient implements ApiClient {
             return "§6++";
         }
 
+        // Owner
+        if ("OWNER".equals(rank)) {
+            return "§6O§eW§aN§bE§dR";
+        }
+
         // Staff
         if ("ADMIN".equals(rank)) {
             return "§4ADMIN";
         }
 
+        // Moderator
         if ("MODERATOR".equals(rank)) {
             return "§2MOD";
         }
 
+        // Helper
         if ("HELPER".equals(rank)) {
             return "§3HELPER";
         }

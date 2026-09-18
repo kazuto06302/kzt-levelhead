@@ -128,6 +128,8 @@ public class LevelHeadCommand extends CommandBase {
         if (args[0].equalsIgnoreCase("dev")) {
             Main.dev = !Main.dev;
             send(sender,"Developer Mode: " + Main.dev);
+            send(sender,"§4§lWARNING");
+            send(sender,"§cDeveloper mode has been enabled. If you are not an administrator, please run the command again to disable developer mode.");
             return;
         }
 
@@ -234,7 +236,6 @@ public class LevelHeadCommand extends CommandBase {
             }
         }
 
-        // prefixを結合
         StringBuilder prefixBuilder = new StringBuilder();
 
         for (int i = 2; i < args.length; i++) {
@@ -245,7 +246,6 @@ public class LevelHeadCommand extends CommandBase {
             prefixBuilder.append(args[i]);
         }
 
-        // 前後のスペースを削除
         String prefix = prefixBuilder.toString().trim();
 
         // !reset

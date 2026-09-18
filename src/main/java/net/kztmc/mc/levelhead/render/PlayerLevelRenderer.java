@@ -88,7 +88,6 @@ public class PlayerLevelRenderer {
         String text = "";
 
         ModConfig.LevelType levelType = Main.CONFIG.getLevelType();
-
         String rank = stats.getRank();
         int nwlv = stats.getHypixelLevel();
         int bwlv = stats.getBedwarsLevel();
